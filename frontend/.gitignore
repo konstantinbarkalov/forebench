@@ -1,0 +1,5 @@
+node_modules
+dist
+build
+src/shared/frontend
+shared/backend/json-file-db

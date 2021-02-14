@@ -1,0 +1,24 @@
+{
+  "name": "forebench-crawler",
+  "version": "0.1.0",
+  "description": "",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "forebench"
+  ],
+  "author": "Konstantin Barkalov <mail@barkalov.ru>",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^14.14.25",
+    "typescript": "^4.1.3"
+  },
+  "dependencies": {
+    "@types/node-fetch": "^2.5.8",
+    "node-fetch": "^2.6.1"
+  }
+}

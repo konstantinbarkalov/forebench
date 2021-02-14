@@ -1,0 +1,5 @@
+secret.ts
+node_modules
+dist
+udb
+src/shared

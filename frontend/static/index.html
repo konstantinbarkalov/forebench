@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>forebench</title>
+        <style>
+            body {
+                background-color: #ccc;
+                color: #222;
+                font-family: Roboto, sans-serif;
+                margin: 0;
+            }
+            #content-root {
+                display: flex;
+                flex-direction: column;
+                margin: 32px;
+            }
+            .scroller {
+                overflow-x: auto;
+                padding-bottom: 32px;
+                margin-bottom: 32px;
+            }
+            .timestep-bricks {
+                display: flex;
+                flex-direction: row;
+                margin: -16px;
+            }
+            .timestep-brick {
+                display: flex;
+                flex-direction: column;
+                margin: 16px;
+                min-width: 200px;
+                max-width: 200px;
+                padding: 16px;
+                background-color: #666;
+                border: 8px solid transparent;
+            }
+            .timestep-brick.timestep-brick--night {
+                background-color: #3c3344;
+            }
+            .timestep-brick.timestep-brick--day {
+                background-color: #fec;
+            }
+            .timestep-brick.timestep-brick--morning {
+                background-color: #fb8;
+            }
+            .timestep-brick.timestep-brick--evening {
+                background-color: #68a;
+            }
+            .timestep-brick.timestep-brick--night, .timestep-brick.timestep-brick--evening {
+                color: #eee;
+            }
+            .timestep-brick.timestep-brick--day, .timestep-brick.timestep-brick.timestep-brick--morning {
+                color: #222;
+            }
+            .timestep-brick.timestep-brick--selected {
+                border-color: white;
+                box-shadow: 0 0 50px 0 rgb(0 0 0 / 20%), inset 0 0 4px 0 rgb(0 0 0 / 25%);
+            }
+            .timestep-brick .timestep-brick__datetime {
+                display: inline;
+                font-size: 14px;
+            }
+            .timestep-brick .timestep-brick__date {
+                display: inline;
+                font-weight: 600;
+            }
+            .timestep-brick .timestep-brick__time {
+                display: inline;
+                font-weight: 400;
+            }
+            .timestep-brick .timestep-brick__date-time-delimiter {
+                display: inline;
+                font-weight: 400;
+            }
+            .timestep-brick .timestep-brick__suptitle {
+                font-weight: 400;
+            }
+            .timestep-brick .timestep-brick__title {
+                font-size: 28px;
+                font-weight: 300;
+                line-height: 24px;
+                padding: 12px 0;
+            }
+            .timestep-brick .timestep-brick__values {
+                display: flex;
+                flex-direction: column;
+            }
+            .active-timestep-brick {
+                display: flex;
+                flex-direction: column;
+                min-width: 300px;
+                min-height: 100px;
+                color: #666
+            }
+
+            .provider-bricks {
+                display: flex;
+                flex-direction: row;
+                margin: -16px;
+            }
+            .provider-brick {
+                display: flex;
+                flex-direction: column;
+                margin: 16px;
+                min-width: 300px;
+                min-height: 100px;
+                padding: 0 16px;
+                border-left: 4px solid #666;
+                color: #666
+            }
+            .active-timestep-brick .active-timestep-brick__datetime,
+            .provider-brick .provider-brick__datetime {
+                display: inline;
+            }
+            .active-timestep-brick .active-timestep-brick__datetime {
+                font-size: 18px;
+            }
+            .provider-brick .provider-brick__datetime {
+                font-size: 14px;
+            }
+            .active-timestep-brick .active-timestep-brick__date,
+            .provider-brick .provider-brick__date {
+                display: inline;
+                font-weight: 600;
+            }
+            .active-timestep-brick .active-timestep-brick__time,
+            .provider-brick .provider-brick__time {
+                display: inline;
+                font-weight: 400;
+            }
+            .active-timestep-brick .active-timestep-brick__date-time-delimiter,
+            .provider-brick .provider-brick__date-time-delimiter {
+                display: inline;
+                font-weight: 400;
+            }
+            .active-timestep-brick .active-timestep-brick__title,
+            .provider-brick .provider-brick__title {
+                font-weight: 300;
+                padding: 12px 0;
+            }
+            .active-timestep-brick .active-timestep-brick__title {
+                font-size: 48px;
+                line-height: 24px;
+            }
+            .provider-brick .provider-brick__title {
+                font-size: 28px;
+                line-height: 24px;
+            }
+            .active-timestep-brick .active-timestep-brick__values,
+            .provider-brick .provider-brick__values {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .kdvu {
+                display: inline;
+            }
+            #chart-datum-container {
+                margin: 0 -32px;
+            }
+            .chart-datum {
+                display: flex;
+                flex-direction: row;
+                height: 70vh;
+                min-height: 400px;
+                width: 100%;
+            }
+            .chart-datum-canvas {
+
+            }
+            .kdvu__key,
+            .kdvu__key-value-delimiter,
+            .kdvu__min-mean-max-delimiter,
+            .kdvu__value,
+            .kdvu__value-min,
+            .kdvu__value-mean,
+            .kdvu__value-max,
+            .kdvu__unit {
+                display: inline;
+            }
+            .kdvu__value-min, .kdvu__value-mean, .kdvu__value-max  {
+                font-weight: 600;
+            }
+
+            .kdvu__min-mean-max-delimiter.kdvu__min-mean-max-delimiter--hidden {
+                display: none;
+            }
+        </style>
+
+    </head>
+    <body>
+        <div id="app-root">
+            <div id="display-root">
+                <div id="content-root">
+                    <div class="scroller" id="timestep-bricks-container">
+                    </div>
+                    <div id="active-timestep-brick-container">
+                    </div>
+                    <div class="scroller" id="provider-bricks-container">
+                    </div>
+                    <div id="chart-datum-container">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="/dist/app.js" type="module"></script>
+    </body>
+</html>
