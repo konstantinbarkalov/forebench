@@ -2,5 +2,3 @@ node_modules
 dist
 build
 .parcel-cache
-src/shared/frontend
-shared/backend/json-file-db
