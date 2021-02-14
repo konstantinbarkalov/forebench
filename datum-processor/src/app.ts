@@ -4,7 +4,7 @@ import { alignToHourstep } from './alignToHourstep';
 import { AbstractCrawledDataParser } from './process/abstractCrawledDataParser';
 import { ForecaCrawledDataParser } from './process/forecaCrawledDataParser';
 import { dateToHourstep, hourstepToDate } from './shared/frontend/chrono';
-import { ByProviderT, HourData, HourDatumBundle, HourProviderData, HourReading, HourReferenceData } from './shared/frontend/datum';
+import { ByProviderT, HourData, HourDatumBundle, HourForecast, HourProviderData, HourReading, HourReferenceData } from './shared/frontend/datum';
 import { Pretty } from './shared/frontend/pretty';
 import { AbstractCrawledDataT, ForecaCrawledData, GidrometCrawledData, OpenWeatherCrawledData, YandexCrawledData } from './shared/backend/udb/crawledData';
 import { KeyUdb, Udb, UdbKeymap } from './shared/backend/udb/udb';
@@ -119,7 +119,7 @@ class App {
   }
 
   public crawledDatumToProviderDatum<CrawledDataG extends AbstractCrawledDataT>(crawledDatum: CrawledDataG[], fromHourstep: number, toHourstep: number, parser: AbstractCrawledDataParser<CrawledDataG>): HourProviderData[] {
-    const alingedForecaCrawledDatum = alignToHourstep(crawledDatum, fromHourstep, toHourstep, (value) => {
+    const alingedCrawledDatum = alignToHourstep(crawledDatum, fromHourstep, toHourstep, (value) => {
       return new Date(value.crawledTimestamp);
     }, (hourstep: number, date: Date) => {
       const hourstepRoundDate = hourstepToDate(hourstep);
@@ -130,9 +130,45 @@ class App {
         return Infinity;
       }
     });
-    const alingedForecaHourProviderDatum = alingedForecaCrawledDatum.map(crawledData => parser.crawledDataToHourProviderData(crawledData, this.maxForecastHourstepsCount));
-    console.log(alingedForecaHourProviderDatum);
-    return alingedForecaHourProviderDatum;
+    const alingedHourProviderDatum = alingedCrawledDatum.map(crawledData => parser.crawledDataToHourProviderData(crawledData, this.maxForecastHourstepsCount));
+    console.log(alingedHourProviderDatum);
+
+    // augment here // TODO find better place
+    alingedHourProviderDatum.forEach(hourProviderData => {
+      this.augmentHourForecasts(hourProviderData.forecasts);
+    });
+
+    return alingedHourProviderDatum;
+  }
+  public augmentHourForecasts(hourForecasts: HourForecast[]): void {
+    const mms = hourForecasts.map((hourForecast, hourstepIdx) => {
+      // calc minmax around central hourstepIdx point
+      const a = hourForecasts[hourstepIdx - 2]?.temperature;
+      const b = hourForecasts[hourstepIdx - 1]?.temperature;
+      const c = hourForecasts[hourstepIdx + 0]!.temperature;
+      const d = hourForecasts[hourstepIdx + 1]?.temperature;
+      const e = hourForecasts[hourstepIdx + 2]?.temperature;
+      const mm = [a, b, c, d, e].reduce((mm, temperatureOrUndefined) => {
+        if (temperatureOrUndefined === undefined) {
+          return mm;
+        } else {
+          return {min: Math.min(mm.min, temperatureOrUndefined.min), max: Math.max(mm.max, temperatureOrUndefined.max)};
+        }
+      }, {min: Infinity, max: -Infinity});
+      return mm;
+    });
+
+    // apply minmax back from mm to hourForecasts
+    hourForecasts.forEach((hourForecast, hourstepIdx) => {
+      const mm = mms[hourstepIdx]!;
+      hourForecast.temperature.min = Math.min(hourForecast.temperature.min, mm.min);
+      hourForecast.temperature.max = Math.max(hourForecast.temperature.max, mm.max);
+    });
+    // widen minimal range between min-mean & mean-max
+    hourForecasts.forEach((hourForecast) => {
+      hourForecast.temperature.min = Math.min(hourForecast.temperature.min, hourForecast.temperature.mean - 0.5);
+      hourForecast.temperature.max = Math.max(hourForecast.temperature.max, hourForecast.temperature.mean + 0.5);
+    });
   }
 }
 const app = new App();
