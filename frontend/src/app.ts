@@ -8,7 +8,7 @@ import { TimestepBricksWidget } from './bricks/timestepBricksWidget.js';
 import { ChartDatumWidget, ChartDatum, ChartByProviderDatum } from './chartDatumWidget.js';
 import { HourDatumBundle } from './shared/frontend/datum.js';
 import { Api } from "./api/api.js";
-import { hourDataToActiveTimestepBrick, hourDataToChartDatum, hourDataToProviderBricks, hourDataToTimestepBricks } from './todo.js';
+import { hourDataToActiveTimestepBrick, hourDatumToChartDatum, hourDataToProviderBricks, hourDataToTimestepBricks } from './todo.js';
 
 class App {
     private api: Api = new Api();
@@ -63,7 +63,7 @@ class App {
         if (lastHourData) {
             providerBricks = hourDataToProviderBricks(lastHourData, timestepBrickIdx);
             activeTimestepBrick = hourDataToActiveTimestepBrick(lastHourData, timestepBrickIdx);
-            chartDatum = hourDataToChartDatum(this.hourDatumBundle!.datum, timestepBrickIdx);
+            chartDatum = hourDatumToChartDatum(this.hourDatumBundle!.datum, timestepBrickIdx);
         } else {
             providerBricks = [];
             activeTimestepBrick = undefined;

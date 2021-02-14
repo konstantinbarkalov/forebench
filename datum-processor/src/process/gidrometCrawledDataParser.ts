@@ -3,6 +3,10 @@ import { GidrometCrawledData } from '../shared/backend/udb/crawledData';
 import { AbstractCrawledDataParser } from './abstractCrawledDataParser';
 
 export class GidrometCrawledDataParser extends AbstractCrawledDataParser<GidrometCrawledData> {
+  protected crawledForecastDataToActualDate(crawledForecastData: any): Date {
+    const actualDate = new Date(crawledForecastData.x);
+    return actualDate;
+  }
   protected jsCodeToData(jsCode: string): any {
     const wrappedJsCode = 'var jsData = []; ' +
         jsCode.replaceAll(/(arr_.[a-z_]+)=/g,'jsData.$1=') +
@@ -34,7 +38,7 @@ export class GidrometCrawledDataParser extends AbstractCrawledDataParser<Gidrome
       mean: crawledForecastData.y,
       max: crawledForecastData.y,
     }
-    const actualDate = new Date(crawledForecastData.x);
+    const actualDate = this.crawledForecastDataToActualDate(crawledForecastData);
     const forecast: HourForecast = new HourForecast(temperature, actualDate);
     return forecast;
   }

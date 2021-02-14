@@ -148,6 +148,7 @@ class App {
       const c = hourForecasts[hourstepIdx + 0]!.temperature;
       const d = hourForecasts[hourstepIdx + 1]?.temperature;
       const e = hourForecasts[hourstepIdx + 2]?.temperature;
+
       const mm = [a, b, c, d, e].reduce((mm, temperatureOrUndefined) => {
         if (temperatureOrUndefined === undefined) {
           return mm;

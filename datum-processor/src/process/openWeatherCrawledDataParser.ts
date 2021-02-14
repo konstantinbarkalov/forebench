@@ -3,6 +3,10 @@ import { OpenWeatherCrawledData } from '../shared/backend/udb/crawledData';
 import { AbstractCrawledDataParser } from './abstractCrawledDataParser';
 
 export class OpenWeatherCrawledDataParser extends AbstractCrawledDataParser<OpenWeatherCrawledData> {
+  protected crawledForecastDataToActualDate(crawledForecastData: any): Date {
+    const actualDate = new Date(crawledForecastData.dt * 1000);
+    return actualDate;
+  }
   protected crawledDataToHourReading(crawledData: OpenWeatherCrawledData): HourReading {
     const kelvinShift = -273.15;
     const temperature = crawledData.weatherRawResponse.main.temp + kelvinShift;
@@ -23,7 +27,8 @@ export class OpenWeatherCrawledDataParser extends AbstractCrawledDataParser<Open
       mean: crawledForecastData.main.temp + kelvinShift,
       max: crawledForecastData.main.temp_max + kelvinShift,
     }
-    const actualDate = new Date(crawledForecastData.dt * 1000);
+
+    const actualDate = this.crawledForecastDataToActualDate(crawledForecastData);
     const forecast: HourForecast = new HourForecast(temperature, actualDate);
     return forecast;
   }

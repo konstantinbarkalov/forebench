@@ -3,6 +3,10 @@ import { YandexCrawledData } from '../shared/backend/udb/crawledData';
 import { AbstractCrawledDataParser } from './abstractCrawledDataParser';
 
 export class YandexCrawledDataParser extends AbstractCrawledDataParser<YandexCrawledData> {
+  protected crawledForecastDataToActualDate(crawledForecastData: any): Date {
+    const actualDate = new Date(crawledForecastData.hour_ts * 1000);
+    return actualDate;
+  }
   protected crawledDataToHourReading(crawledData: YandexCrawledData): HourReading {
     const temperature = crawledData.rawResponse.fact.temp;
     const actualDate = new Date(crawledData.rawResponse.now * 1000);
@@ -24,7 +28,7 @@ export class YandexCrawledDataParser extends AbstractCrawledDataParser<YandexCra
       mean: crawledForecastData.temp,
       max: crawledForecastData.temp,
     }
-    const actualDate = new Date(crawledForecastData.hour_ts * 1000);
+    const actualDate = this.crawledForecastDataToActualDate(crawledForecastData);
     const forecast: HourForecast = new HourForecast(temperature, actualDate);
     return forecast;
   }

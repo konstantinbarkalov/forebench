@@ -3,6 +3,10 @@ import { ForecaCrawledData } from '../shared/backend/udb/crawledData';
 import { AbstractCrawledDataParser } from './abstractCrawledDataParser';
 
 export class ForecaCrawledDataParser extends AbstractCrawledDataParser<ForecaCrawledData> {
+  protected crawledForecastDataToActualDate(crawledForecastData: any): Date {
+    const actualDate = new Date(crawledForecastData.time);
+    return actualDate;
+  }
   protected crawledDataToHourReading(crawledData: ForecaCrawledData): HourReading {
     const temperature = crawledData.weatherRawResponse.current.temperature;
     const actualDate = new Date(crawledData.weatherRawResponse.current.time);
@@ -21,7 +25,7 @@ export class ForecaCrawledDataParser extends AbstractCrawledDataParser<ForecaCra
       mean: crawledForecastData.temperature,
       max: crawledForecastData.temperature,
     }
-    const actualDate = new Date(crawledForecastData.time);
+    const actualDate = this.crawledForecastDataToActualDate(crawledForecastData);
     const forecast: HourForecast = new HourForecast(temperature, actualDate);
     return forecast;
   }
