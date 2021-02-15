@@ -9,14 +9,21 @@ export class ChartPointData {
         public value: Mmm,
     ) {
     }
-
 }
-export class ChartByProviderDatum implements ByProviderT<ChartPointData[]> {
+export class ChartPointSerialDatum {
     constructor (
-        public openWeather: ChartPointData[],
-        public foreca: ChartPointData[],
-        public yandex: ChartPointData[],
-        public gidromet: ChartPointData[],
+        public values: ChartPointData[],
+        public shift: number,
+    ) {
+    }
+}
+
+export class ChartByProviderDatum implements ByProviderT<ChartPointSerialDatum> {
+    constructor (
+        public openWeather: ChartPointSerialDatum,
+        public foreca: ChartPointSerialDatum,
+        public yandex: ChartPointSerialDatum,
+        public gidromet: ChartPointSerialDatum,
     ) {
 
     }
@@ -25,9 +32,10 @@ export class ChartByProviderDatum implements ByProviderT<ChartPointData[]> {
 
 export class ChartDatum {
     constructor (
-        public byProvider: ChartByProviderDatum,
-        public reference: ChartPointData[],
-        public maxLength: number,
+        public readingByProvider: ChartByProviderDatum,
+        public forecastByProvider: ChartByProviderDatum,
+        public reference: ChartPointSerialDatum,
+        public hourstepDim: number,
         public firstHourstep: number,
         public unit: string,
     ) {
@@ -42,14 +50,14 @@ export class ChartDatumWidget {
     protected $root?: HTMLElement;
     protected $canvas?: HTMLCanvasElement;
     protected ctx?: CanvasRenderingContext2D;
-    protected retinaSize: {width: number, height: number} = {width: 0, height: 0};
     protected virtualSize: {width: number, height: number} = {width: 0, height: 0};
-    protected xRullerSize: number = 32;
-    protected yRullerSize: number = 80;
-    protected outerMargin: number = 32;
-    protected innerMargin: number = 8;
+    protected xRullerVirualSize: number = 32;
+    protected yRullerVirualSize: number = 80;
+    protected outerVirualMargin: number = 32;
+    protected innerVirualMargin: number = 8;
     protected chartDatum?: ChartDatum;
-    protected hotPointChartPosition: positionT =  {x: 1, y: 0.5};
+    protected hotPointChartPosition: positionT = {x: 1, y: 0.5};
+    protected hotHourstep: number | undefined;
     protected datumBounds: {x: {min: number, max: number, width: number}, y: {min: number, max: number, height: number}} = {
         x: {
             min: 0,
@@ -62,20 +70,22 @@ export class ChartDatumWidget {
             height: 0,
         }
     };
-    protected globalCoords: {
-        xRullerGlobalSize: sizeT,
-        yRullerGlobalSize: sizeT,
-        chartGlobalSize: sizeT,
-        chartTopLeftGlobalPosition: positionT,
-        xRullerTopLeftGlobalPosition: positionT,
-        yRullerTopLeftGlobalPosition: positionT
+    protected retinaCoords: {
+        retinaSize: sizeT,
+        xRullerRetinaSize: sizeT,
+        yRullerRetinaSize: sizeT,
+        chartRetinaSize: sizeT,
+        chartTopLeftRetinaPosition: positionT,
+        xRullerTopLeftRetinaPosition: positionT,
+        yRullerTopLeftRetinaPosition: positionT
     } = {
-        xRullerGlobalSize: {width: 0, height: 0},
-        yRullerGlobalSize: {width: 0, height: 0},
-        chartGlobalSize: {width: 0, height: 0},
-        chartTopLeftGlobalPosition: {x: 0, y: 0},
-        xRullerTopLeftGlobalPosition: {x: 0, y: 0},
-        yRullerTopLeftGlobalPosition: {x: 0, y: 0}
+        retinaSize: {width: 0, height: 0},
+        xRullerRetinaSize: {width: 0, height: 0},
+        yRullerRetinaSize: {width: 0, height: 0},
+        chartRetinaSize: {width: 0, height: 0},
+        chartTopLeftRetinaPosition: {x: 0, y: 0},
+        xRullerTopLeftRetinaPosition: {x: 0, y: 0},
+        yRullerTopLeftRetinaPosition: {x: 0, y: 0}
     };
     public ee: EventTarget = new EventTarget();
     public setChartDatum(chartDatum: ChartDatum) {
@@ -97,21 +107,28 @@ export class ChartDatumWidget {
             }
         }
         if (this.chartDatum) {
-            const byProvider: ByProviderT<ChartPointData[]> = this.chartDatum.byProvider;
+            const byProviders: ByProviderT<ChartPointSerialDatum>[] = [this.chartDatum.forecastByProvider, this.chartDatum.readingByProvider];
             type keyT = 'minValue' | 'meanValue' | 'maxValue';
-            var keys: keyT[] = ['minValue','meanValue', 'maxValue']
-            Object.values(byProvider).forEach(chartPoints => {
-                chartPoints.forEach(chartPoint => {
-                    keys.forEach(key => {
-                        const value = chartPoint.value[key];
-                        if (value !== undefined) {
-                            this.datumBounds.y.min = Math.min(this.datumBounds.y.min, value);
-                            this.datumBounds.y.max = Math.max(this.datumBounds.y.max, value);
-                        }
+            const keys: keyT[] = ['minValue','meanValue', 'maxValue']
+
+            byProviders.forEach(byProvider => {
+                Object.values(byProvider).forEach(datum => {
+                    datum.values.forEach(chartPoint => {
+                        keys.forEach(key => {
+                            const value = chartPoint.value[key];
+                            if (value !== undefined) {
+                                this.datumBounds.y.min = Math.min(this.datumBounds.y.min, value);
+                                this.datumBounds.y.max = Math.max(this.datumBounds.y.max, value);
+                            }
+                        })
                     })
                 })
             })
-            this.chartDatum!.reference.forEach(chartPoint => {
+
+
+
+
+            this.chartDatum!.reference.values.forEach(chartPoint => {
                 keys.forEach(key => {
                     const value = chartPoint.value[key];
                     if (value !== undefined) {
@@ -121,73 +138,82 @@ export class ChartDatumWidget {
                 });
             });
             this.datumBounds.x.min = this.chartDatum.firstHourstep;
-            this.datumBounds.x.max = this.chartDatum.firstHourstep + this.chartDatum.maxLength - 1;
+            this.datumBounds.x.max = this.chartDatum.firstHourstep + this.chartDatum.hourstepDim - 1;
             this.datumBounds.x.width = this.datumBounds.x.max - this.datumBounds.x.min;
             this.datumBounds.y.height = this.datumBounds.y.max - this.datumBounds.y.min;
 
         }
 
     }
-    protected recalcGlobalCoords() {
-        const xRullerGlobalSize = {
-            width: this.retinaSize.width - this.outerMargin * 2 - this.innerMargin * 1 - this.yRullerSize,
-            height: this.xRullerSize,
+    protected recalcRetinaCoords() {
+        const retinaSize = {
+            width: this.virtualSize.width * window.devicePixelRatio,
+            height: this.virtualSize.height * window.devicePixelRatio,
         }
-        const yRullerGlobalSize = {
-            width: this.yRullerSize,
-            height: this.retinaSize.height - this.outerMargin * 2 - this.innerMargin * 1 - this.xRullerSize,
+        const xRullerRetina1DSize = this.xRullerVirualSize * window.devicePixelRatio;
+        const yRullerRetina1DSize = this.yRullerVirualSize * window.devicePixelRatio;
+        const outerRetinaMargin = this.outerVirualMargin * window.devicePixelRatio;
+        const innerRetinaMargin = this.innerVirualMargin * window.devicePixelRatio;
+        const xRullerRetinaSize = {
+            width: retinaSize.width - outerRetinaMargin * 2 - innerRetinaMargin * 1 - yRullerRetina1DSize,
+            height: xRullerRetina1DSize,
         }
-        const chartGlobalSize = {
-            width: this.retinaSize.width - this.outerMargin * 2 - this.innerMargin * 1 - yRullerGlobalSize.width,
-            height: this.retinaSize.height - this.outerMargin * 2 - this.innerMargin * 1 - xRullerGlobalSize.height,
+        const yRullerRetinaSize = {
+            width: yRullerRetina1DSize,
+            height: retinaSize.height - outerRetinaMargin * 2 - innerRetinaMargin * 1 - xRullerRetina1DSize,
         }
-        const chartTopLeftGlobalPosition = {
-            x: this.outerMargin * 1,
-            y: this.outerMargin * 1,
+        const chartRetinaSize = {
+            width: retinaSize.width - outerRetinaMargin * 2 - innerRetinaMargin * 1 - yRullerRetinaSize.width,
+            height: retinaSize.height - outerRetinaMargin * 2 - innerRetinaMargin * 1 - xRullerRetinaSize.height,
         }
-        const xRullerTopLeftGlobalPosition = {
-            x: this.outerMargin * 1,
-            y: this.outerMargin * 1 + this.innerMargin * 1 + chartGlobalSize.height,
+        const chartTopLeftRetinaPosition = {
+            x: outerRetinaMargin * 1,
+            y: outerRetinaMargin * 1,
         }
-        const yRullerTopLeftGlobalPosition = {
-            x: this.outerMargin * 1 + this.innerMargin * 1 + chartGlobalSize.width,
-            y: this.outerMargin * 1,
+        const xRullerTopLeftRetinaPosition = {
+            x: outerRetinaMargin * 1,
+            y: outerRetinaMargin * 1 + innerRetinaMargin * 1 + chartRetinaSize.height,
         }
-        this.globalCoords = {
-            xRullerGlobalSize,
-            yRullerGlobalSize,
-            chartGlobalSize,
-            chartTopLeftGlobalPosition,
-            xRullerTopLeftGlobalPosition,
-            yRullerTopLeftGlobalPosition
+        const yRullerTopLeftRetinaPosition = {
+            x: outerRetinaMargin * 1 + innerRetinaMargin * 1 + chartRetinaSize.width,
+            y: outerRetinaMargin * 1,
+        }
+        this.retinaCoords = {
+            retinaSize,
+            xRullerRetinaSize,
+            yRullerRetinaSize,
+            chartRetinaSize,
+            chartTopLeftRetinaPosition,
+            xRullerTopLeftRetinaPosition,
+            yRullerTopLeftRetinaPosition
         }
     }
     protected remap = {
-        chartToGlobal: (chartPosition: positionT) => {
-            const globalPosition = {
-                x: this.globalCoords.chartTopLeftGlobalPosition.x + chartPosition.x * this.globalCoords.chartGlobalSize.width,
-                y: this.globalCoords.chartTopLeftGlobalPosition.y + (1 - chartPosition.y) * this.globalCoords.chartGlobalSize.height,
+        chartToRetina: (chartPosition: positionT) => {
+            const retinaPosition = {
+                x: this.retinaCoords.chartTopLeftRetinaPosition.x + chartPosition.x * this.retinaCoords.chartRetinaSize.width,
+                y: this.retinaCoords.chartTopLeftRetinaPosition.y + (1 - chartPosition.y) * this.retinaCoords.chartRetinaSize.height,
             }
-            return globalPosition;
+            return retinaPosition;
         },
-        xRullerToGlobal: (xRullerPosition: positionT) => {
-            const globalPosition = {
-                x: this.globalCoords.xRullerTopLeftGlobalPosition.x + xRullerPosition.x * this.globalCoords.xRullerGlobalSize.width,
-                y: this.globalCoords.xRullerTopLeftGlobalPosition.y + (1 - xRullerPosition.y) * this.globalCoords.xRullerGlobalSize.height,
+        xRullerToRetina: (xRullerPosition: positionT) => {
+            const retinaPosition = {
+                x: this.retinaCoords.xRullerTopLeftRetinaPosition.x + xRullerPosition.x * this.retinaCoords.xRullerRetinaSize.width,
+                y: this.retinaCoords.xRullerTopLeftRetinaPosition.y + (1 - xRullerPosition.y) * this.retinaCoords.xRullerRetinaSize.height,
             }
-            return globalPosition;
+            return retinaPosition;
         },
-        yRullerToGlobal: (yRullerPosition: positionT) => {
-            const globalPosition = {
-                x: this.globalCoords.yRullerTopLeftGlobalPosition.x + yRullerPosition.x * this.globalCoords.yRullerGlobalSize.width,
-                y: this.globalCoords.yRullerTopLeftGlobalPosition.y + (1 - yRullerPosition.y) * this.globalCoords.yRullerGlobalSize.height,
+        yRullerToRetina: (yRullerPosition: positionT) => {
+            const retinaPosition = {
+                x: this.retinaCoords.yRullerTopLeftRetinaPosition.x + yRullerPosition.x * this.retinaCoords.yRullerRetinaSize.width,
+                y: this.retinaCoords.yRullerTopLeftRetinaPosition.y + (1 - yRullerPosition.y) * this.retinaCoords.yRullerRetinaSize.height,
             }
-            return globalPosition;
+            return retinaPosition;
         },
-        globalToChart: (globalPosition: positionT) => {
+        retinaToChart: (retinaPosition: positionT) => {
             const chartPosition = {
-                x: (globalPosition.x - this.globalCoords.chartTopLeftGlobalPosition.x) / this.globalCoords.chartGlobalSize.width,
-                y: 1 - (globalPosition.y - this.globalCoords.chartTopLeftGlobalPosition.y) / this.globalCoords.chartGlobalSize.height,
+                x: (retinaPosition.x - this.retinaCoords.chartTopLeftRetinaPosition.x) / this.retinaCoords.chartRetinaSize.width,
+                y: 1 - (retinaPosition.y - this.retinaCoords.chartTopLeftRetinaPosition.y) / this.retinaCoords.chartRetinaSize.height,
             }
             return chartPosition;
         },
@@ -212,11 +238,11 @@ export class ChartDatumWidget {
             this.onDomResize();
         });
         this.$canvas.addEventListener('mousemove', (e) => {
-            const globalPosition = {
+            const retinaPosition = {
                 x: e.offsetX * window.devicePixelRatio,
                 y: e.offsetY * window.devicePixelRatio
             }
-            this.setHotpoint(globalPosition);
+            this.setHotpoint(retinaPosition);
         });
         setTimeout(()=>{
             this.onDomResize(); // this.redraw(); inside
@@ -224,45 +250,42 @@ export class ChartDatumWidget {
 
     }
     protected onDomResize() {
-        this.retinaSize = {
-            width: this.$root!.clientWidth * window.devicePixelRatio,
-            height: this.$root!.clientHeight * window.devicePixelRatio,
-        }
         this.virtualSize = {
             width: this.$root!.clientWidth,
             height: this.$root!.clientHeight,
         }
-
+        this.recalcRetinaCoords();
         const intRetinaSize = {
-            width: Math.floor(this.retinaSize.width),
-            height: Math.floor(this.retinaSize.height),
+            width: Math.floor(this.retinaCoords.retinaSize.width),
+            height: Math.floor(this.retinaCoords.retinaSize.height),
         }
-
         const intishVirtualSize = {
             width: (intRetinaSize.width / window.devicePixelRatio),
             height: (intRetinaSize.height / window.devicePixelRatio),
         }
-
         this.$canvas!.width = intRetinaSize.width;
         this.$canvas!.height = intRetinaSize.height;
         this.$canvas!.style.width = intishVirtualSize + 'px';
         this.$canvas!.style.height = intishVirtualSize + 'px';
-        this.recalcGlobalCoords();
         this.redraw();
     }
-    protected setHotpoint(globalPosition: positionT) {
-        this.hotPointChartPosition = clampLocalPosition(this.remap.globalToChart(globalPosition));
+    protected setHotpoint(retinaPosition: positionT) {
+        this.hotPointChartPosition = clampLocalPosition(this.remap.retinaToChart(retinaPosition));
         this.redraw();
     }
-    protected drawBoundingBox(mappingToGlobal: remapFnT): void {
+    public setHothourstep(hotHourstep: number | undefined) {
+        this.hotHourstep = hotHourstep;
+        this.redraw();
+    }
+    protected drawBoundingBox(mappingToRetina: remapFnT): void {
         { // box
             this.ctx!.save();
-            this.ctx!.strokeStyle = '1px #000';
-            this.ctx!.globalAlpha = 0.2;
-            const point1 = mappingToGlobal({x: 0, y: 0});
-            const point2 = mappingToGlobal({x: 0, y: 1});
-            const point3 = mappingToGlobal({x: 1, y: 1});
-            const point4 = mappingToGlobal({x: 1, y: 0});
+            this.ctx!.strokeStyle = '#000';
+            this.ctx!.globalAlpha = 1;
+            const point1 = mappingToRetina({x: 0, y: 0});
+            const point2 = mappingToRetina({x: 0, y: 1});
+            const point3 = mappingToRetina({x: 1, y: 1});
+            const point4 = mappingToRetina({x: 1, y: 0});
             this.ctx!.beginPath();
             this.ctx!.moveTo(point1.x, point1.y);
             this.ctx!.lineTo(point2.x, point2.y);
@@ -272,42 +295,63 @@ export class ChartDatumWidget {
             this.ctx!.stroke();
             this.ctx!.restore();
         }
-        { // top arrow
-            this.ctx!.save();
-            this.ctx!.strokeStyle = '1px #000';
-            this.ctx!.globalAlpha = 0.2;
-            const point1 = mappingToGlobal({x: 0.5, y: 0});
-            const point2 = mappingToGlobal({x: 0.5, y: 1});
-            const point3 = mappingToGlobal({x: 0.4, y: 0.8});
-            const point4 = mappingToGlobal({x: 0.6, y: 0.8});
-            this.ctx!.beginPath();
-            this.ctx!.moveTo(point1.x, point1.y);
-            this.ctx!.lineTo(point2.x, point2.y);
-            this.ctx!.lineTo(point3.x, point3.y);
-            this.ctx!.lineTo(point4.x, point4.y);
-            this.ctx!.lineTo(point2.x, point2.y);
-            this.ctx!.stroke();
-            this.ctx!.restore();
-        }
+        // { // top arrow
+        //     this.ctx!.save();
+        //     this.ctx!.strokeStyle = '1px #000';
+        //     this.ctx!.globalAlpha = 0.2;
+        //     const point1 = mappingToRetina({x: 0.5, y: 0});
+        //     const point2 = mappingToRetina({x: 0.5, y: 1});
+        //     const point3 = mappingToRetina({x: 0.4, y: 0.8});
+        //     const point4 = mappingToRetina({x: 0.6, y: 0.8});
+        //     this.ctx!.beginPath();
+        //     this.ctx!.moveTo(point1.x, point1.y);
+        //     this.ctx!.lineTo(point2.x, point2.y);
+        //     this.ctx!.lineTo(point3.x, point3.y);
+        //     this.ctx!.lineTo(point4.x, point4.y);
+        //     this.ctx!.lineTo(point2.x, point2.y);
+        //     this.ctx!.stroke();
+        //     this.ctx!.restore();
+        // }
     }
     protected redraw() {
-        this.ctx!.clearRect(0, 0, this.retinaSize!.width, this.retinaSize!.height);
+        this.ctx!.clearRect(0, 0, this.retinaCoords.retinaSize.width, this.retinaCoords.retinaSize.height);
+
+
+
         if (this.chartDatum) {
             this.ctx!.save();
-            //this.drawBoundingBox(this.remap.chartToGlobal);
-            //this.drawBoundingBox(this.remap.xRullerToGlobal);
-            //this.drawBoundingBox(this.remap.yRullerToGlobal);
+
+
+            /////////
+            const retinaPos1 = this.remap.chartToRetina({x: 0, y: 0});
+            const retinaPos2 = this.remap.chartToRetina({x: 1, y: 1});
+            this.ctx!.fillStyle = '#fff';
+            this.ctx!.fillRect(retinaPos1.x, retinaPos1.y, retinaPos2.x - retinaPos1.x, retinaPos2.y - retinaPos1.y);
+            /////////
+
+            //this.drawBoundingBox(this.remap.chartToRetina);
+            //this.drawBoundingBox(this.remap.xRullerToRetina);
+            //this.drawBoundingBox(this.remap.yRullerToRetina);
+
+
             this.ctx!.restore();
-            const entries:[providerKeyT, ChartPointData[]][] = Object.entries(this.chartDatum.byProvider) as [providerKeyT, ChartPointData[]][];
-            entries.forEach(([providerKey, chartPoints])=> {
+            const forecastEntries:[providerKeyT, ChartPointSerialDatum][] = Object.entries(this.chartDatum.forecastByProvider) as [providerKeyT, ChartPointSerialDatum][];
+            forecastEntries.forEach(([providerKey, chartPoints])=> {
                 const baseColor = providerColors[providerKey];
-                this.drawProviderMean(providerKey, chartPoints, this.chartDatum!.firstHourstep, baseColor, 2, [5, 5]);
-                this.drawProviderMinMax(providerKey, chartPoints, this.chartDatum!.firstHourstep, baseColor);
+                this.drawProviderMean(providerKey, chartPoints, this.chartDatum!.firstHourstep , baseColor, 2, [5, 5]);
+                this.drawProviderMinMax(providerKey, chartPoints, this.chartDatum!.firstHourstep , baseColor);
+            });
+
+            const readingEntries:[providerKeyT, ChartPointSerialDatum][] = Object.entries(this.chartDatum.readingByProvider) as [providerKeyT, ChartPointSerialDatum][];
+            readingEntries.forEach(([providerKey, chartPoints])=> {
+                const baseColor = providerColors[providerKey];
+                this.drawProviderMean(providerKey, chartPoints, this.chartDatum!.firstHourstep , baseColor, 2);
+                this.drawProviderMinMax(providerKey, chartPoints, this.chartDatum!.firstHourstep , baseColor);
             });
 
             { // reference
-                const baseColor = {r: 0, g: 0, b: 0, a: 1};
-                this.drawProviderMean('reference', this.chartDatum.reference, this.chartDatum!.firstHourstep, baseColor, 8);
+                const baseColor = {r: 0, g: 0, b: 0, a: 0.67};
+                this.drawProviderMean('reference', this.chartDatum.reference, this.chartDatum!.firstHourstep, baseColor, 16);
                 this.drawProviderMinMax('reference', this.chartDatum.reference, this.chartDatum!.firstHourstep, baseColor);
             }
 
@@ -320,11 +364,12 @@ export class ChartDatumWidget {
             const retinaSize = virtualSize * window.devicePixelRatio;
             this.ctx!.font = `${retinaSize}px Roboto, sans-serif`;
             this.ctx!.textAlign = 'center';
-            this.ctx!.fillText('no datum', this.retinaSize!.width / 2, this.retinaSize!.height / 2);
+            this.ctx!.fillText('no datum', this.retinaCoords.retinaSize.width / 2, this.retinaCoords.retinaSize.height / 2);
             this.ctx!.restore();
         }
     }
-    protected drawProviderMean(providerKey: string, chartPoints: ChartPointData[], firstHourstep: number, color: rgbaT, lineWidth: number = 4, lineDash: [number, number] | undefined = undefined) {
+    protected drawProviderMean(providerKey: string, serialDatum: ChartPointSerialDatum, firstHourstep: number, color: rgbaT, lineWidth: number = 4, lineDash: [number, number] | undefined = undefined) {
+        const chartPoints = serialDatum.values;
         const firstChartPoint = chartPoints[0];
         if (firstChartPoint) {
             const htmlColor = rgbaToHtmlColor(dimColor(color));
@@ -335,18 +380,19 @@ export class ChartDatumWidget {
             if (lineDash) {
                 this.ctx!.setLineDash(lineDash);
             }
-            const firstGlobalPosition = this.remap.chartToGlobal((this.remap.datumToLocal({x: firstHourstep, y: firstChartPoint.value.meanValue!})));
-            this.ctx!.moveTo(firstGlobalPosition.x, firstGlobalPosition.y);
+            const firstRetinaPosition = this.remap.chartToRetina((this.remap.datumToLocal({x: firstHourstep + serialDatum.shift, y: firstChartPoint.value.meanValue!})));
+            this.ctx!.moveTo(firstRetinaPosition.x, firstRetinaPosition.y);
             chartPoints.forEach((chartPoint, chartPointIdx) => {
-                const globalPosition = this.remap.chartToGlobal((this.remap.datumToLocal({x: firstHourstep + chartPointIdx, y: chartPoint.value.meanValue!})));
-                this.ctx!.lineTo(globalPosition.x, globalPosition.y);
+                const retinaPosition = this.remap.chartToRetina((this.remap.datumToLocal({x: firstHourstep + serialDatum.shift + chartPointIdx, y: chartPoint.value.meanValue!})));
+                this.ctx!.lineTo(retinaPosition.x, retinaPosition.y);
             });
             this.ctx!.stroke();
             this.ctx!.restore();
 
         }
     }
-    protected drawProviderMinMax(providerKey: string, chartPoints: ChartPointData[], firstHourstep: number, color: rgbaT) {
+    protected drawProviderMinMax(providerKey: string, serialDatum: ChartPointSerialDatum, firstHourstep: number, color: rgbaT) {
+        const chartPoints = serialDatum.values;
         const firstChartPoint = chartPoints[0];
         if (firstChartPoint) {
             const htmlColor = rgbaToHtmlColor(color);
@@ -355,17 +401,17 @@ export class ChartDatumWidget {
             this.ctx!.globalAlpha = 0.2;
             this.ctx!.beginPath();
             { // min slope
-                const firstGlobalPosition = this.remap.chartToGlobal((this.remap.datumToLocal({x: firstHourstep, y: firstChartPoint.value.minValue!})));
-                this.ctx!.moveTo(firstGlobalPosition.x, firstGlobalPosition.y);
+                const firstRetinaPosition = this.remap.chartToRetina((this.remap.datumToLocal({x: firstHourstep + serialDatum.shift, y: firstChartPoint.value.minValue!})));
+                this.ctx!.moveTo(firstRetinaPosition.x, firstRetinaPosition.y);
                 chartPoints.forEach((chartPoint, chartPointIdx) => {
-                    const globalPosition = this.remap.chartToGlobal((this.remap.datumToLocal({x: firstHourstep + chartPointIdx, y: chartPoint.value.minValue!})));
-                    this.ctx!.lineTo(globalPosition.x, globalPosition.y);
+                    const retinaPosition = this.remap.chartToRetina((this.remap.datumToLocal({x: firstHourstep + serialDatum.shift + chartPointIdx, y: chartPoint.value.minValue!})));
+                    this.ctx!.lineTo(retinaPosition.x, retinaPosition.y);
                 });
             }
             { // max slope
                 chartPoints.slice().reverse().forEach((chartPoint, chartPointIdx) => {
-                    const globalPosition = this.remap.chartToGlobal((this.remap.datumToLocal({x: firstHourstep + chartPoints.length - 1 - chartPointIdx, y: chartPoint.value.maxValue!})));
-                    this.ctx!.lineTo(globalPosition.x, globalPosition.y);
+                    const retinaPosition = this.remap.chartToRetina((this.remap.datumToLocal({x: firstHourstep + serialDatum.shift + chartPoints.length - 1 - chartPointIdx, y: chartPoint.value.maxValue!})));
+                    this.ctx!.lineTo(retinaPosition.x, retinaPosition.y);
                 });
             }
             this.ctx!.closePath();
@@ -375,10 +421,10 @@ export class ChartDatumWidget {
         }
     }
     protected drawXRuller() {
-        const stepMinGlobalWidth = 160 * window.devicePixelRatio;
-        const stepGlobalWidth = Math.max(stepMinGlobalWidth, this.globalCoords.xRullerGlobalSize.width / this.datumBounds.x.width);
-        const stepDatumWidth = stepGlobalWidth / this.globalCoords.xRullerGlobalSize.width * this.datumBounds.x.width;
-        const stepsCount = Math.floor(this.globalCoords.xRullerGlobalSize.width / stepGlobalWidth);
+        const stepMinRetinaWidth = 160 * window.devicePixelRatio;
+        const stepRetinaWidth = Math.max(stepMinRetinaWidth, this.retinaCoords.xRullerRetinaSize.width / this.datumBounds.x.width);
+        const stepDatumWidth = stepRetinaWidth / this.retinaCoords.xRullerRetinaSize.width * this.datumBounds.x.width;
+        const stepsCount = Math.floor(this.retinaCoords.xRullerRetinaSize.width / stepRetinaWidth);
         this.ctx!.save();
 
         {
@@ -395,22 +441,53 @@ export class ChartDatumWidget {
                 const localX1 = this.remap.datumToLocal({x: dataX, y: 0}).x;
                 const localX2 = this.remap.datumToLocal({x: dataX + 6, y: 0}).x;
                 {
-                    const globalPoint1 = this.remap.xRullerToGlobal({x: localX1, y: 0.8});
-                    const globalPoint2 = this.remap.xRullerToGlobal({x: localX2, y: 1});
+                    const retinaPoint1 = this.remap.xRullerToRetina({x: localX1, y: 0.8});
+                    const retinaPoint2 = this.remap.xRullerToRetina({x: localX2, y: 1});
                     const htmlColor = rgbaToHtmlColor(quaterdayColors[(firstQuaterdaystep + quaterdayIdx) % 4]);
                     this.ctx!.fillStyle = htmlColor;
                     this.ctx!.globalAlpha = 1;
-                    this.ctx!.fillRect(globalPoint1.x, globalPoint1.y, globalPoint2.x - globalPoint1.x, globalPoint2.y - globalPoint1.y);
+                    this.ctx!.fillRect(retinaPoint1.x, retinaPoint1.y, retinaPoint2.x - retinaPoint1.x, retinaPoint2.y - retinaPoint1.y);
                 }
                 {
-                    const globalPoint1 = this.remap.chartToGlobal({x: localX1, y: 0});
-                    const globalPoint2 = this.remap.chartToGlobal({x: localX2, y: 1});
+                    const retinaPoint1 = this.remap.chartToRetina({x: localX1, y: 0});
+                    const retinaPoint2 = this.remap.chartToRetina({x: localX2, y: 1});
                     const htmlColor = rgbaToHtmlColor(quaterdayColors[(firstQuaterdaystep + quaterdayIdx) % 4]);
                     this.ctx!.fillStyle = htmlColor;
                     this.ctx!.globalAlpha = 0.1;
-                    this.ctx!.fillRect(globalPoint1.x, globalPoint1.y, globalPoint2.x - globalPoint1.x, globalPoint2.y - globalPoint1.y);
+                    this.ctx!.fillRect(retinaPoint1.x, retinaPoint1.y, retinaPoint2.x - retinaPoint1.x, retinaPoint2.y - retinaPoint1.y);
                 }
             }
+        }
+
+        this.hotHourstep = dateToHourstep(new Date()); // TODO remove
+        if (this.hotHourstep !== undefined) {
+            const hotDatumX1 = this.hotHourstep;
+            const hotDatumX2 = hotDatumX1 + 1;
+            const hotLocalX1 = (hotDatumX1 - this.datumBounds.x.min) / this.datumBounds.x.width;
+            const hotLocalX2 = (hotDatumX2 - this.datumBounds.x.min) / this.datumBounds.x.width;
+            const hotHourstepRetinaPoint1 = this.remap.chartToRetina({x: hotLocalX1, y: 0});
+            const hotHourstepRetinaPoint2 = this.remap.chartToRetina({x: hotLocalX2, y: 1});
+            const quaterdaystep = dateToQuaterdaystep(hourstepToDate(this.hotHourstep));
+            const htmlColor = rgbaToHtmlColor(quaterdayColors[quaterdaystep % 4]);
+            this.ctx!.fillStyle = htmlColor;
+            //this.ctx!.fillStyle = '#fff';
+            this.ctx!.globalAlpha = 0.75;
+            this.ctx!.fillRect(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint1.y, hotHourstepRetinaPoint2.x - hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint2.y - hotHourstepRetinaPoint1.y);
+
+            this.ctx!.lineWidth = 1;
+            //this.ctx!.strokeStyle = htmlColor;
+            this.ctx!.strokeStyle = '#fff';
+            this.ctx!.globalAlpha = 1;
+            this.ctx!.beginPath();
+            this.ctx!.moveTo(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint1.y);
+            this.ctx!.lineTo(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint2.y);
+            this.ctx!.stroke();
+            this.ctx!.strokeStyle = '#000';
+            this.ctx!.globalAlpha = 0.1;
+            this.ctx!.beginPath();
+            this.ctx!.moveTo(hotHourstepRetinaPoint2.x, hotHourstepRetinaPoint1.y);
+            this.ctx!.lineTo(hotHourstepRetinaPoint2.x, hotHourstepRetinaPoint2.y);
+            this.ctx!.stroke();
         }
 
         {
@@ -427,28 +504,28 @@ export class ChartDatumWidget {
                 if (stepIdx !== firstHotStepIdx && stepIdx !== firstHotStepIdx + 1) {
                     const localX = stepIdx / (stepsCount - 1);
                     const datumX = localX * this.datumBounds.x.width + this.datumBounds.x.min;
-                    const globalPoint1 = this.remap.xRullerToGlobal({x: localX, y: 0});
-                    const globalPoint2 = this.remap.xRullerToGlobal({x: localX, y: 0.5});
-                    const globalPoint3 = this.remap.xRullerToGlobal({x: localX, y: 1});
+                    const retinaPoint1 = this.remap.xRullerToRetina({x: localX, y: 0});
+                    const retinaPoint2 = this.remap.xRullerToRetina({x: localX, y: 0.5});
+                    const retinaPoint3 = this.remap.xRullerToRetina({x: localX, y: 1});
                     this.ctx!.beginPath();
-                    this.ctx!.moveTo(globalPoint2.x, globalPoint2.y);
-                    this.ctx!.lineTo(globalPoint3.x, globalPoint3.y);
+                    this.ctx!.moveTo(retinaPoint2.x, retinaPoint2.y);
+                    this.ctx!.lineTo(retinaPoint3.x, retinaPoint3.y);
                     this.ctx!.stroke();
                     const date = hourstepToDate(datumX);
                     const prettyDatetime = Pretty.date(date) + ' ' + Pretty.time(date);
-                    this.ctx!.fillText(prettyDatetime, globalPoint1.x, globalPoint1.y);
+                    this.ctx!.fillText(prettyDatetime, retinaPoint1.x, retinaPoint1.y);
                 }
             }
         }
         {
             const hotLocalX = this.hotPointChartPosition.x;
             const hotDatumX = hotLocalX * this.datumBounds.x.width + this.datumBounds.x.min;
-            const hotGlobalPoint1 = this.remap.xRullerToGlobal({x: hotLocalX, y: 0});
-            const hotGlobalPoint2 = this.remap.xRullerToGlobal({x: hotLocalX, y: 0.5});
-            const hotGlobalPoint3 = this.remap.xRullerToGlobal({x: hotLocalX, y: 1});
+            const hotRetinaPoint1 = this.remap.xRullerToRetina({x: hotLocalX, y: 0});
+            const hotRetinaPoint2 = this.remap.xRullerToRetina({x: hotLocalX, y: 0.5});
+            const hotRetinaPoint3 = this.remap.xRullerToRetina({x: hotLocalX, y: 1});
             this.ctx!.beginPath();
-            this.ctx!.moveTo(hotGlobalPoint2.x, hotGlobalPoint2.y);
-            this.ctx!.lineTo(hotGlobalPoint3.x, hotGlobalPoint3.y);
+            this.ctx!.moveTo(hotRetinaPoint2.x, hotRetinaPoint2.y);
+            this.ctx!.lineTo(hotRetinaPoint3.x, hotRetinaPoint3.y);
             this.ctx!.stroke();
             const virtualSize = 14;
             const retinaSize = virtualSize * window.devicePixelRatio;
@@ -456,25 +533,26 @@ export class ChartDatumWidget {
             const date = hourstepToDate(hotDatumX);
             const prettyDatetime = Pretty.date(date) + ' ' + Pretty.time(date) + ' ' + Pretty.quaterday(date);
             const prettyDatetimeShift = Pretty.relativeDay(date);
-            this.ctx!.fillText(prettyDatetime, hotGlobalPoint1.x, hotGlobalPoint1.y);
-            this.ctx!.fillText(prettyDatetimeShift, hotGlobalPoint1.x, hotGlobalPoint1.y + 12);
+            this.ctx!.fillText(prettyDatetime, hotRetinaPoint1.x, hotRetinaPoint1.y);
+            this.ctx!.fillText(prettyDatetimeShift, hotRetinaPoint1.x, hotRetinaPoint1.y + retinaSize);
         }
         {
-            const globalPoint1 = this.remap.xRullerToGlobal({x: 1, y: 1});
-            const globalPoint2 = this.remap.xRullerToGlobal({x: 0, y: 1});
+            const retinaPoint1 = this.remap.xRullerToRetina({x: 1, y: 1});
+            const retinaPoint2 = this.remap.xRullerToRetina({x: 0, y: 1});
             this.ctx!.beginPath();
-            this.ctx!.moveTo(globalPoint1.x, globalPoint1.y);
-            this.ctx!.lineTo(globalPoint2.x, globalPoint2.y);
+            this.ctx!.moveTo(retinaPoint1.x, retinaPoint1.y);
+            this.ctx!.lineTo(retinaPoint2.x, retinaPoint2.y);
             this.ctx!.stroke();
         }
+
         this.ctx!.restore();
     }
 
     protected drawYRuller() {
-        const stepMinGlobalHeight = 16 * window.devicePixelRatio;
-        const stepGlobalHeight = Math.max(stepMinGlobalHeight, this.globalCoords.yRullerGlobalSize.height / this.datumBounds.y.height);
-        //const stepDatumHeight = stepGlobalHeight / this.globalCoords.yRullerGlobalSize.height * this.datumBounds.y.height;
-        const stepsCount = Math.floor(this.globalCoords.yRullerGlobalSize.height / stepGlobalHeight);
+        const stepMinRetinaHeight = 16 * window.devicePixelRatio;
+        const stepRetinaHeight = Math.max(stepMinRetinaHeight, this.retinaCoords.yRullerRetinaSize.height / this.datumBounds.y.height);
+        //const stepDatumHeight = stepRetinaHeight / this.retinaCoords.yRullerRetinaSize.height * this.datumBounds.y.height;
+        const stepsCount = Math.floor(this.retinaCoords.yRullerRetinaSize.height / stepRetinaHeight);
         this.ctx!.save();
         const virtualSize = 14;
         const retinaSize = virtualSize * window.devicePixelRatio;
@@ -488,57 +566,57 @@ export class ChartDatumWidget {
             if (stepIdx !== firstHotStepIdx && stepIdx !== firstHotStepIdx + 1) {
                 const localY = stepIdx / (stepsCount - 1);
                 const datumY = localY * this.datumBounds.y.height + this.datumBounds.y.min;
-                const globalPoint1 = this.remap.yRullerToGlobal({x: 1, y: localY});
-                const globalPoint2 = this.remap.yRullerToGlobal({x: 0.25, y: localY});
-                const globalPoint3 = this.remap.yRullerToGlobal({x: 0, y: localY});
+                const retinaPoint1 = this.remap.yRullerToRetina({x: 1, y: localY});
+                const retinaPoint2 = this.remap.yRullerToRetina({x: 0.25, y: localY});
+                const retinaPoint3 = this.remap.yRullerToRetina({x: 0, y: localY});
                 this.ctx!.beginPath();
-                this.ctx!.moveTo(globalPoint2.x, globalPoint2.y);
-                this.ctx!.lineTo(globalPoint3.x, globalPoint3.y);
+                this.ctx!.moveTo(retinaPoint2.x, retinaPoint2.y);
+                this.ctx!.lineTo(retinaPoint3.x, retinaPoint3.y);
                 this.ctx!.stroke();
-                this.ctx!.fillText(Pretty.number(datumY) + ' ' + this.chartDatum!.unit, globalPoint1.x, globalPoint1.y);
+                this.ctx!.fillText(Pretty.number(datumY) + ' ' + this.chartDatum!.unit, retinaPoint1.x, retinaPoint1.y);
             }
         }
         {
             const hotLocalY = this.hotPointChartPosition.y;
             const hotDatumY = hotLocalY * this.datumBounds.y.height + this.datumBounds.y.min;
-            const hotGlobalPoint1 = this.remap.yRullerToGlobal({x: 1, y: hotLocalY});
-            const hotGlobalPoint2 = this.remap.yRullerToGlobal({x: 0.25, y: hotLocalY});
-            const hotGlobalPoint3 = this.remap.yRullerToGlobal({x: 0, y: hotLocalY});
+            const hotRetinaPoint1 = this.remap.yRullerToRetina({x: 1, y: hotLocalY});
+            const hotRetinaPoint2 = this.remap.yRullerToRetina({x: 0.25, y: hotLocalY});
+            const hotRetinaPoint3 = this.remap.yRullerToRetina({x: 0, y: hotLocalY});
             this.ctx!.beginPath();
-            this.ctx!.moveTo(hotGlobalPoint2.x, hotGlobalPoint2.y);
-            this.ctx!.lineTo(hotGlobalPoint3.x, hotGlobalPoint3.y);
+            this.ctx!.moveTo(hotRetinaPoint2.x, hotRetinaPoint2.y);
+            this.ctx!.lineTo(hotRetinaPoint3.x, hotRetinaPoint3.y);
             this.ctx!.stroke();
             const virtualSize = 14;
             const retinaSize = virtualSize * window.devicePixelRatio;
             this.ctx!.font = `900 ${retinaSize}px Roboto, sans-serif`;
-            this.ctx!.fillText(Pretty.number(hotDatumY, 1, true) + ' ' + this.chartDatum!.unit, hotGlobalPoint1.x, hotGlobalPoint1.y);
+            this.ctx!.fillText(Pretty.number(hotDatumY, 1, true) + ' ' + this.chartDatum!.unit, hotRetinaPoint1.x, hotRetinaPoint1.y);
         }
         {
-            const globalPoint1 = this.remap.yRullerToGlobal({x: 0, y: 0});
-            const globalPoint2 = this.remap.yRullerToGlobal({x: 0, y: 1});
+            const retinaPoint1 = this.remap.yRullerToRetina({x: 0, y: 0});
+            const retinaPoint2 = this.remap.yRullerToRetina({x: 0, y: 1});
             this.ctx!.beginPath();
-            this.ctx!.moveTo(globalPoint1.x, globalPoint1.y);
-            this.ctx!.lineTo(globalPoint2.x, globalPoint2.y);
+            this.ctx!.moveTo(retinaPoint1.x, retinaPoint1.y);
+            this.ctx!.lineTo(retinaPoint2.x, retinaPoint2.y);
             this.ctx!.stroke();
         }
         this.ctx!.restore();
     }
 
     protected drawHotPoint() {
-        const chartHotPointGlobalPositionX1 = this.remap.chartToGlobal({x: this.hotPointChartPosition.x, y: 0});
-        const chartHotPointGlobalPositionX2 = this.remap.chartToGlobal({x: this.hotPointChartPosition.x, y: 1});
-        const chartHotPointGlobalPositionY1 = this.remap.chartToGlobal({x: 0, y: this.hotPointChartPosition.y});
-        const chartHotPointGlobalPositionY2 = this.remap.chartToGlobal({x: 1, y: this.hotPointChartPosition.y});
+        const chartHotPointRetinaPositionX1 = this.remap.chartToRetina({x: this.hotPointChartPosition.x, y: 0});
+        const chartHotPointRetinaPositionX2 = this.remap.chartToRetina({x: this.hotPointChartPosition.x, y: 1});
+        const chartHotPointRetinaPositionY1 = this.remap.chartToRetina({x: 0, y: this.hotPointChartPosition.y});
+        const chartHotPointRetinaPositionY2 = this.remap.chartToRetina({x: 1, y: this.hotPointChartPosition.y});
         this.ctx!.save();
         this.ctx!.strokeStyle = '#000';
         this.ctx!.lineWidth = 0.5;
         this.ctx!.beginPath();
-        this.ctx!.moveTo(chartHotPointGlobalPositionX1.x, chartHotPointGlobalPositionX1.y);
-        this.ctx!.lineTo(chartHotPointGlobalPositionX2.x, chartHotPointGlobalPositionX2.y);
+        this.ctx!.moveTo(chartHotPointRetinaPositionX1.x, chartHotPointRetinaPositionX1.y);
+        this.ctx!.lineTo(chartHotPointRetinaPositionX2.x, chartHotPointRetinaPositionX2.y);
         this.ctx!.stroke();
         this.ctx!.beginPath();
-        this.ctx!.moveTo(chartHotPointGlobalPositionY1.x, chartHotPointGlobalPositionY1.y);
-        this.ctx!.lineTo(chartHotPointGlobalPositionY2.x, chartHotPointGlobalPositionY2.y);
+        this.ctx!.moveTo(chartHotPointRetinaPositionY1.x, chartHotPointRetinaPositionY1.y);
+        this.ctx!.lineTo(chartHotPointRetinaPositionY2.x, chartHotPointRetinaPositionY2.y);
         this.ctx!.stroke();
         this.ctx!.restore();
     }

@@ -131,7 +131,6 @@ class App {
       }
     });
     const alingedHourProviderDatum = alingedCrawledDatum.map(crawledData => parser.crawledDataToHourProviderData(crawledData, this.maxForecastHourstepsCount));
-    console.log(alingedHourProviderDatum);
 
     // augment here // TODO find better place
     alingedHourProviderDatum.forEach(hourProviderData => {
@@ -143,13 +142,12 @@ class App {
   public augmentHourForecasts(hourForecasts: HourForecast[]): void {
     const mms = hourForecasts.map((hourForecast, hourstepIdx) => {
       // calc minmax around central hourstepIdx point
-      const a = hourForecasts[hourstepIdx - 2]?.temperature;
-      const b = hourForecasts[hourstepIdx - 1]?.temperature;
-      const c = hourForecasts[hourstepIdx + 0]!.temperature;
-      const d = hourForecasts[hourstepIdx + 1]?.temperature;
-      const e = hourForecasts[hourstepIdx + 2]?.temperature;
+      const a = hourForecasts[hourstepIdx - 1]?.temperature;
+      const b = hourForecasts[hourstepIdx + 0]!.temperature;
+      const c = hourForecasts[hourstepIdx + 1]?.temperature;
 
-      const mm = [a, b, c, d, e].reduce((mm, temperatureOrUndefined) => {
+
+      const mm = [a, b, c].reduce((mm, temperatureOrUndefined) => {
         if (temperatureOrUndefined === undefined) {
           return mm;
         } else {
