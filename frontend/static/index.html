@@ -323,43 +323,45 @@
             </div>
         </div>
         <script>
-            const $jsErrorContainer = document.getElementById('js-error-container');
-            class JsErrorShower {
-                static isFault = false;
-                static faults = {};
-                static setIsFault(isFault) {
+            var $jsErrorContainer = document.getElementById('js-error-container');
+            var JsErrorShower = {
+                isFault: false,
+                faults: [],
+                setIsFault: function(isFault) {
                     if (JsErrorShower.isFault !== isFault) {
                         JsErrorShower.isFault = isFault;
                         JsErrorShower.updateDom_isFault();
                     }
-                }
-                static clearFaults(fault) {
-                    JsErrorShower.faults = {};
+                },
+                clearFaults: function(fault) {
+                    JsErrorShower.faults = [];
                     JsErrorShower.setIsFault(false);
                     JsErrorShower.updateDom(fault);
-                }
-                static addFalut(fault) {
-                    const key = fault.toString();
-                    JsErrorShower.faults[key] = fault;
+                },
+                addFalut: function(fault) {
+                    JsErrorShower.faults[JsErrorShower.faults.length] = fault;
                     JsErrorShower.setIsFault(true);
                     JsErrorShower.updateDom();
-                }
-                static updateDom() {
-                    let text = Object.values(JsErrorShower.faults).map(fault => {
-                        if (fault instanceof Error) {
-                            return `ERROR: ${fault.message} + ${fault.name} \n ${fault.stack}`;
-                        } else if (fault instanceof ErrorEvent) {
-                            return `ERROR EVENT: ${fault.error.message} + ${fault.error.name} \n ${fault.error.stack}`;
+                },
+                updateDom: function() {
+                    var text = '';
+                    for (let faultIdx = 0; faultIdx < JsErrorShower.faults.length; faultIdx++) {
+                        const fault = JsErrorShower.faults[faultIdx];
+                        if (fault.message !== undefined) {
+                            text = text + 'ERROR: ' + fault.message + ' ' + fault.name + ' \n ' + fault.stack;
+                        } else if (fault.error !== undefined) {
+                            text = text + 'ERROR EVENT: ' + fault.error.message + ' ' + fault.error.name + '\n ' + fault.error.stack;
                         } else {
-                            return `FLAT ERROR: ${fault}`;
+                            text = text + 'FLAT ERROR: ' + fault;
                         }
-                    }).join('\n------------\n');
+                        text = text + '\n------------\n';
+                    }
                     $jsErrorContainer.innerText = text;
-                }
-                static updateDom_isFault() {
+                },
+                updateDom_isFault: function() {
                     //$mediaRoot.classList.toggle('js-fault', this.isFault);
-                }
-                static init() {
+                },
+                init: function() {
                     window.addEventListener('error', function (fault) {
                         JsErrorShower.addFalut(fault);
                     });
