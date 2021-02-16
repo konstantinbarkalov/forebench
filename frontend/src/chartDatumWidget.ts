@@ -265,8 +265,8 @@ export class ChartDatumWidget {
         }
         this.$canvas!.width = intRetinaSize.width;
         this.$canvas!.height = intRetinaSize.height;
-        this.$canvas!.style.width = intishVirtualSize + 'px';
-        this.$canvas!.style.height = intishVirtualSize + 'px';
+        this.$canvas!.style.width = intishVirtualSize.width + 'px';
+        this.$canvas!.style.height = intishVirtualSize.height + 'px';
         this.redraw();
     }
     protected setHotpoint(retinaPosition: positionT) {
