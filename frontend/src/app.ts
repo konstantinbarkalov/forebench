@@ -10,6 +10,13 @@ import { HourDatumBundle } from './shared/frontend/datum.js';
 import { Api } from "./api/api.js";
 import { hourDataToActiveTimestepBrick, hourDataToProviderBricks, hourDataToTimestepBricks, hourDatumToAnalysisChartDatum, hourDatumToOverviewChartDatum } from './todo.js';
 
+const $timestepBricksContainer = document.getElementById('timestep-bricks-container');
+const $activeTimestepBrickContainer = document.getElementById('active-timestep-brick-container');
+const $providerBricksContainer = document.getElementById('provider-bricks-container');
+const $chartDatumContainer = document.getElementById('chart-datum-container');
+const $chartDatumContainer2 = document.getElementById('chart-datum-container2');
+const $devLogContainer = document.getElementById('dev-log-container');
+
 class App {
     private api: Api = new Api();
     private timestepBricksWidget: TimestepBricksWidget;
@@ -43,7 +50,8 @@ class App {
         // await this.api.init();
     }
     public async start() {
-        const hourDatumBundle = await this.api.getHourDatumBundle();
+        //const hourDatumBundle = await this.api.getHourDatumBundle();
+        const hourDatumBundle = await this.api.getHourDatumBundleWithProgress($devLogContainer!);
         this.setHourDatumBundle(hourDatumBundle);
     }
     private setHourDatumBundle(hourDatumBundle: HourDatumBundle) {
@@ -89,11 +97,6 @@ class App {
         this.chartDatumWidget2.setHothourstep(lastHourData.hourstep + timestepBrickIdx * 6);
     }
 }
-const $timestepBricksContainer = document.getElementById('timestep-bricks-container');
-const $activeTimestepBrickContainer = document.getElementById('active-timestep-brick-container');
-const $providerBricksContainer = document.getElementById('provider-bricks-container');
-const $chartDatumContainer = document.getElementById('chart-datum-container');
-const $chartDatumContainer2 = document.getElementById('chart-datum-container2');
 
 const app = new App($timestepBricksContainer!, $activeTimestepBrickContainer!, $providerBricksContainer!, $chartDatumContainer!, $chartDatumContainer2!);
 

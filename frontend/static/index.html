@@ -210,9 +210,12 @@
             }
             .trust-selector-select {
                 appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                -ms-appearance: none;
                 font-size: inherit;
-                padding: 8px;
-                padding-right: 0px;
+                padding: 6px 8px;
+                /* padding-right: 0px; */
                 background-color: #76a170;
                 color: #fff;
                 border: none;
@@ -237,6 +240,8 @@
             <div id="display-root">
                 <div id="content-root">
                     <div id="js-error-container">
+                    </div>
+                    <div id="dev-log-container">
                     </div>
                     <div class="hero">
                         <div class="hero-line">
