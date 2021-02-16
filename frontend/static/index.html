@@ -347,10 +347,10 @@
                     var text = '';
                     for (let faultIdx = 0; faultIdx < JsErrorShower.faults.length; faultIdx++) {
                         const fault = JsErrorShower.faults[faultIdx];
-                        if (fault.message !== undefined) {
-                            text = text + 'ERROR: ' + fault.message + ' ' + fault.name + ' \n ' + fault.stack;
-                        } else if (fault.error !== undefined) {
+                        if (fault.error !== undefined) {
                             text = text + 'ERROR EVENT: ' + fault.error.message + ' ' + fault.error.name + '\n ' + fault.error.stack;
+                        } else if (fault.message !== undefined) {
+                            text = text + 'ERROR: ' + fault.message + ' ' + fault.name + ' \n ' + fault.filename + ' \n ' + fault.lineno + ' \n ' + fault.stack;
                         } else {
                             text = text + 'FLAT ERROR: ' + fault;
                         }
@@ -373,6 +373,7 @@
             }
             JsErrorShower.init();
         </script>
+        <script>asd.asd.asd</script>
         <!-- <script src="/build/app.js" type="module"></script> -->
         <script src="/dist/app.js"></script>
     </body>
