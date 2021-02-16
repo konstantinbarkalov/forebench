@@ -21,6 +21,10 @@
                 padding-bottom: 32px;
                 margin-bottom: 32px;
             }
+            .scroller.scroller--momentum {
+                overflow-x: scroll;
+                -webkit-overflow-scrolling: touch;
+            }
             .timestep-bricks {
                 display: flex;
                 flex-direction: row;
@@ -315,11 +319,11 @@
                     </div>
                     <div id="chart-datum-container">
                     </div>
-                    <div class="scroller" id="timestep-bricks-container">
+                    <div class="scroller scroller--momentum" id="timestep-bricks-container">
                     </div>
                     <div id="active-timestep-brick-container">
                     </div>
-                    <div class="scroller" id="provider-bricks-container">
+                    <div class="scroller scroller--momentum" id="provider-bricks-container">
                     </div>
                     <div id="chart-datum-container2">
                     </div>
