@@ -223,7 +223,7 @@
         <div id="app-root">
             <div id="display-root">
                 <div id="content-root">
-                    <div class="" id="error-log">
+                    <div id="js-error-container">
                     </div>
                     <div class="hero">
                         <div class="hero-line">
@@ -322,6 +322,55 @@
                 </div>
             </div>
         </div>
+        <script>
+            const $jsErrorContainer = document.getElementById('js-error-container');
+            class JsErrorShower {
+                static isFault = false;
+                static faults = {};
+                static setIsFault(isFault) {
+                    if (JsErrorShower.isFault !== isFault) {
+                        JsErrorShower.isFault = isFault;
+                        JsErrorShower.updateDom_isFault();
+                    }
+                }
+                static clearFaults(fault) {
+                    JsErrorShower.faults = {};
+                    JsErrorShower.setIsFault(false);
+                    JsErrorShower.updateDom(fault);
+                }
+                static addFalut(fault) {
+                    const key = fault.toString();
+                    JsErrorShower.faults[key] = fault;
+                    JsErrorShower.setIsFault(true);
+                    JsErrorShower.updateDom();
+                }
+                static updateDom() {
+                    let text = Object.values(JsErrorShower.faults).map(fault => {
+                        if (fault instanceof Error) {
+                            return `ERROR: ${fault.message} + ${fault.name} \n ${fault.stack}`;
+                        } else if (fault instanceof ErrorEvent) {
+                            return `ERROR EVENT: ${fault.error.message} + ${fault.error.name} \n ${fault.error.stack}`;
+                        } else {
+                            return `FLAT ERROR: ${fault}`;
+                        }
+                    }).join('\n------------\n');
+                    $jsErrorContainer.innerText = text;
+                }
+                static updateDom_isFault() {
+                    //$mediaRoot.classList.toggle('js-fault', this.isFault);
+                }
+                static init() {
+                    window.addEventListener('error', function (fault) {
+                        JsErrorShower.addFalut(fault);
+                    });
+                    window.addEventListener('unhandledrejection', function (event) {
+                        console.log('wer');
+                        JsErrorShower.addFalut(event.reason);
+                    });
+                }
+            }
+            JsErrorShower.init();
+        </script>
         <!-- <script src="/build/app.js" type="module"></script> -->
         <script src="/dist/app.js"></script>
     </body>
