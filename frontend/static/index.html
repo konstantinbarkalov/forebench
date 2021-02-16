@@ -232,8 +232,10 @@
                 color: #fff;
                 border: none;
             }
+            #dev-log-container {
+                display: none;
+            }
         </style>
-
     </head>
     <body>
         <div id="app-root">
@@ -274,25 +276,7 @@
                         </div>
                         <hr/>
                         <div class="hero-line">
-                            <span>карточки по</span>
-                            <select class="aux-selector-select">
-                                <option value="0.5">
-                                    1 час
-                                </option>
-                                <option value="0.9">
-                                    2 часа
-                                </option>
-                                <option value="0.95">
-                                    3 часа
-                                </option>
-                                <option value="0.99" selected>
-                                    6 часов
-                                </option>
-                                <option value="0.999">
-                                    24 часа
-                                </option>
-                            </select>
-                            <span>, показывать прогноз максимум на </span>
+                            <span>показывать прогноз на </span>
                             <select class="aux-selector-select">
                                 <option value="0.5">
                                     1 день
@@ -310,7 +294,7 @@
                                     7 дней
                                 </option>
                             </select>
-                            <span>вперед, историю последние</span>
+                            <span>вперед, историю наблюдений за </span>
                             <select class="aux-selector-select">
                                 <option value="0.5">
                                     24 часа
@@ -323,6 +307,24 @@
                                 </option>
                                 <option value="0.99" selected>
                                     30 дней
+                                </option>
+                            </select>
+                            <span>и карточки с шагом по</span>
+                            <select class="aux-selector-select">
+                                <option value="0.5">
+                                    1 час
+                                </option>
+                                <option value="0.9">
+                                    2 часа
+                                </option>
+                                <option value="0.95">
+                                    3 часа
+                                </option>
+                                <option value="0.99" selected>
+                                    6 часов
+                                </option>
+                                <option value="0.999">
+                                    24 часа
                                 </option>
                             </select>
                         </div>
