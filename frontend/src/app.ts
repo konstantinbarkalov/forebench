@@ -85,6 +85,8 @@ class App {
         };
         this.chartDatumWidget.setChartDatum(overviewChartDatum);
         this.chartDatumWidget2.setChartDatum(analysisChartDatum);
+        this.chartDatumWidget.setHothourstep(lastHourData.hourstep + timestepBrickIdx * 6);
+        this.chartDatumWidget2.setHothourstep(lastHourData.hourstep + timestepBrickIdx * 6);
     }
 }
 const $timestepBricksContainer = document.getElementById('timestep-bricks-container');

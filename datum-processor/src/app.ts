@@ -113,6 +113,26 @@ class App {
       const referece: HourReferenceData = new HourReferenceData(refereceReading);
       hourDatum[hourstepIdx] = new HourData(byProvider, referece, fromHourstep + hourstepIdx);
     }
+
+    //// alignedStatistics
+    const alingedHourProviderDatum: ByProviderT<HourProviderData[]> = {
+      openWeather: hourDatum.map(hourData => hourData.byProvider.openWeather),
+      foreca: hourDatum.map(hourData => hourData.byProvider.foreca),
+      yandex: hourDatum.map(hourData => hourData.byProvider.yandex),
+      gidromet: hourDatum.map(hourData => hourData.byProvider.gidromet),
+    };
+
+    const alignedHourReferenceDatum = hourDatum.map(hourData => hourData.reference);
+
+    // const alignedStatistics: ByProviderT<{mean: number, standartDeviation: number}[]> = {
+    //   openWeather: this.calcStatisticForAlignedHourProviderDatum(alingedHourProviderDatum.openWeather, alignedHourReferenceDatum),
+    //   foreca: this.calcStatisticForAlignedHourProviderDatum(alingedHourProviderDatum.foreca, alignedHourReferenceDatum),
+    //   yandex: this.calcStatisticForAlignedHourProviderDatum(alingedHourProviderDatum.yandex, alignedHourReferenceDatum),
+    //   gidromet: this.calcStatisticForAlignedHourProviderDatum(alingedHourProviderDatum.gidromet, alignedHourReferenceDatum),
+    // };
+
+    //// alignedStatistics end
+
     const hourDatumBundle: HourDatumBundle = new HourDatumBundle(hourDatum);
     return hourDatumBundle;
 
@@ -169,6 +189,45 @@ class App {
       hourForecast.temperature.max = Math.max(hourForecast.temperature.max, hourForecast.temperature.mean + 0.5);
     });
   }
+
+  public calcStatisticForAlignedHourProviderDatum(alingedHourProviderDatum: HourProviderData[], alignedReferenceDatum: HourReferenceData[]): {mean: number, standartDeviation: number}[] {
+    const forecastStatics: {mean: number, standartDeviation: number}[] = [];
+    for (let forecastHourstepIdx = 0; forecastHourstepIdx < this.maxForecastHourstepsCount; forecastHourstepIdx++) {
+      const alignedForecastsForGivenHourstep = alingedHourProviderDatum.map(alingedHourProviderData => {
+        return alingedHourProviderData.forecasts[forecastHourstepIdx]!;
+      });
+      const alignedReferencesForGivenHourstep = alignedReferenceDatum.slice(forecastHourstepIdx + 1);
+      const forecastStaticForGivenHourstep = this.calcStatisticForAlignedHourForecasts(alignedForecastsForGivenHourstep, alignedReferencesForGivenHourstep);
+      forecastStatics[forecastHourstepIdx] = forecastStaticForGivenHourstep;
+    }
+    return forecastStatics;
+  }
+  protected calcStatisticForAlignedHourForecasts(alignedHourForecasts: HourForecast[], alignedReferenceDatum: HourReferenceData[]): {mean: number, standartDeviation: number} {
+    // only alingled, don't cares about binded timestep!
+    if (alignedHourForecasts.length !== alignedReferenceDatum.length) {
+      throw new Error('unaligned');
+    }
+    const diffSum = alignedHourForecasts.reduce((diffSum, hourForecast, hourstepIdx) => {
+      const refernece = alignedReferenceDatum[hourstepIdx]!;
+      const diff = refernece.reading.temperature - hourForecast.temperature.mean;
+      diffSum += diff;
+      return diffSum;;
+    }, 0);
+    const diffSumMean = diffSum / alignedHourForecasts.length;
+    const mean = diffSumMean;
+
+    const distSquares = alignedHourForecasts.map((hourForecast, hourstepIdx) => {
+      const refernece = alignedReferenceDatum[hourstepIdx]!;
+      const diff = refernece.reading.temperature - hourForecast.temperature.mean;
+      const distSquare = diff ** diff;
+      return distSquare;
+    });
+    const distSquaresSum = distSquares.reduce((distSquaresSum, distSquare) => distSquare + distSquaresSum, 0);
+    const distSquaresMean = distSquaresSum / distSquares.length;
+    const dispersion = distSquaresMean;
+    const standartDeviation = Math.sqrt(dispersion);
+    return {mean, standartDeviation};
+  };
 }
 const app = new App();
 async function start() {

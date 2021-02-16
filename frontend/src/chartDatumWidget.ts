@@ -51,7 +51,7 @@ export class ChartDatumWidget {
     protected $canvas?: HTMLCanvasElement;
     protected ctx?: CanvasRenderingContext2D;
     protected virtualSize: {width: number, height: number} = {width: 0, height: 0};
-    protected xRullerVirualSize: number = 32;
+    protected xRullerVirualSize: number = 60;
     protected yRullerVirualSize: number = 80;
     protected outerVirualMargin: number = 32;
     protected innerVirualMargin: number = 8;
@@ -435,7 +435,6 @@ export class ChartDatumWidget {
             const firstQuaterdayDate = quaterdaystepToDate(firstQuaterdaystep);
             const firstQuaterdayHourstep = dateToHourstep(firstQuaterdayDate);
             const quaterdayHourstepDiff = firstQuaterdayHourstep - firstHourstep;
-            console.log('AAAA, firstDate', firstDate);
             for (let quaterdayIdx = 0; quaterdayIdx < quaterdaysCount; quaterdayIdx++) {
                 const dataX = firstHourstep + quaterdayHourstepDiff + quaterdayIdx * 6;
                 const localX1 = this.remap.datumToLocal({x: dataX, y: 0}).x;
@@ -459,38 +458,57 @@ export class ChartDatumWidget {
             }
         }
 
-        this.hotHourstep = dateToHourstep(new Date()); // TODO remove
         if (this.hotHourstep !== undefined) {
             const hotDatumX1 = this.hotHourstep;
             const hotDatumX2 = hotDatumX1 + 1;
+            const hotDatumX3 = hotDatumX1 - 1;
             const hotLocalX1 = (hotDatumX1 - this.datumBounds.x.min) / this.datumBounds.x.width;
             const hotLocalX2 = (hotDatumX2 - this.datumBounds.x.min) / this.datumBounds.x.width;
+            const hotLocalX3 = (hotDatumX3 - this.datumBounds.x.min) / this.datumBounds.x.width;
             const hotHourstepRetinaPoint1 = this.remap.chartToRetina({x: hotLocalX1, y: 0});
             const hotHourstepRetinaPoint2 = this.remap.chartToRetina({x: hotLocalX2, y: 1});
             const quaterdaystep = dateToQuaterdaystep(hourstepToDate(this.hotHourstep));
             const htmlColor = rgbaToHtmlColor(quaterdayColors[quaterdaystep % 4]);
-            this.ctx!.fillStyle = htmlColor;
-            //this.ctx!.fillStyle = '#fff';
+            //this.ctx!.fillStyle = htmlColor;
+            this.ctx!.fillStyle = '#fff';
             this.ctx!.globalAlpha = 0.75;
-            this.ctx!.fillRect(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint1.y, hotHourstepRetinaPoint2.x - hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint2.y - hotHourstepRetinaPoint1.y);
+            //this.ctx!.fillRect(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint1.y, hotHourstepRetinaPoint2.x - hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint2.y - hotHourstepRetinaPoint1.y);
 
             this.ctx!.lineWidth = 1;
             //this.ctx!.strokeStyle = htmlColor;
-            this.ctx!.strokeStyle = '#fff';
+            this.ctx!.strokeStyle = '#000';
             this.ctx!.globalAlpha = 1;
             this.ctx!.beginPath();
             this.ctx!.moveTo(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint1.y);
             this.ctx!.lineTo(hotHourstepRetinaPoint1.x, hotHourstepRetinaPoint2.y);
             this.ctx!.stroke();
             this.ctx!.strokeStyle = '#000';
-            this.ctx!.globalAlpha = 0.1;
+            this.ctx!.globalAlpha = 1;
             this.ctx!.beginPath();
             this.ctx!.moveTo(hotHourstepRetinaPoint2.x, hotHourstepRetinaPoint1.y);
             this.ctx!.lineTo(hotHourstepRetinaPoint2.x, hotHourstepRetinaPoint2.y);
+            //this.ctx!.stroke();
+
+
+
+            const hotHourstepChevronRetinaPoint1 = this.remap.xRullerToRetina({x: hotLocalX1, y: 1});
+            const hotHourstepChevronRetinaPoint2 = this.remap.xRullerToRetina({x: hotLocalX2, y: 0.5});
+            const hotHourstepChevronRetinaPoint3 = this.remap.xRullerToRetina({x: hotLocalX3, y: 0.5});
+            this.ctx!.fillStyle = htmlColor;
+            this.ctx!.strokeStyle = '#fff';
+            this.ctx!.lineWidth = 4;
+            this.ctx!.globalAlpha = 1;
+            this.ctx!.beginPath();
+            this.ctx!.moveTo(hotHourstepChevronRetinaPoint3.x, hotHourstepChevronRetinaPoint3.y);
+            this.ctx!.lineTo(hotHourstepChevronRetinaPoint1.x, hotHourstepChevronRetinaPoint1.y);
+            this.ctx!.lineTo(hotHourstepChevronRetinaPoint2.x, hotHourstepChevronRetinaPoint2.y);
+            this.ctx!.closePath();
+            this.ctx!.fill();
             this.ctx!.stroke();
         }
 
         {
+            this.ctx!.lineWidth = 0.5;
             const virtualSize = 14;
             const retinaSize = virtualSize * window.devicePixelRatio;
             this.ctx!.font = `${retinaSize}px Roboto, sans-serif`;
@@ -561,6 +579,7 @@ export class ChartDatumWidget {
         this.ctx!.fillStyle = '#000';
         this.ctx!.textBaseline = 'middle';
         this.ctx!.textAlign = 'right';
+        this.ctx!.lineWidth = 0.5;
         const firstHotStepIdx = Math.floor(this.hotPointChartPosition.y * (stepsCount - 1));
         for (let stepIdx = 0; stepIdx < stepsCount; stepIdx++) {
             if (stepIdx !== firstHotStepIdx && stepIdx !== firstHotStepIdx + 1) {
