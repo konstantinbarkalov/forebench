@@ -48,7 +48,7 @@ export const providerColors: {[key in providerKeyT]: rgbaT} = {
     openWeather: {r: 1.00, g: 0.50, b: 0.00, a: 1},
     foreca: {r: 0.00, g: 1.00, b: 0.50, a: 1},
     yandex: {r: 0.50, g: 0.00, b: 1.00, a: 1},
-    gidromet: {r: 1.00, g: 0.00, b: 0.50, a: 1},
+    gidromet: {r: 1.00, g: 0.00, b: 0.50, a: 0},
 }
 export const quaterdayColors: [rgbaT, rgbaT, rgbaT, rgbaT] = [
     {r: 60/255, g: 51/255, b: 68/255, a: 1},
@@ -144,106 +144,125 @@ export function hourDataToActiveTimestepBrick(hourData: HourData, timestepBrickI
     }
 
 }
-export function hourDatumToOverviewChartDatum(hourDatum: HourData[], timestepBrickIdx: number): ChartDatum {
-    let firstHourstep = hourDatum[0].hourstep;
-    let lastHourstep = hourDatum[hourDatum.length - 1].hourstep;
+export function hourDatumToOverviewChartDatum(hourDatum: HourData[], timemachineHourstep: number): ChartDatum {
+    const firstHourstep = hourDatum[0].hourstep;
+    const lastHourstep = hourDatum[hourDatum.length - 1].hourstep;
+    const timemachineShift = timemachineHourstep - firstHourstep + 1;
+    const timemachineNowHourDatum = hourDatum.slice(0, timemachineShift); // TODO
+    if (timemachineNowHourDatum.length > 0 ) {
+        const openWeatherChartDatum = timemachineNowHourDatum.map(hourData => {
+            const mmm = new Mmm(hourData.byProvider.openWeather.reading.temperature, hourData.byProvider.openWeather.reading.temperature, hourData.byProvider.openWeather.reading.temperature);
+            const chartPointData = new ChartPointData(mmm);
+            return chartPointData;
+        });
+        const forecaChartDatum = timemachineNowHourDatum.map(hourData => {
+            const mmm = new Mmm(hourData.byProvider.foreca.reading.temperature, hourData.byProvider.foreca.reading.temperature, hourData.byProvider.foreca.reading.temperature);
+            const chartPointData = new ChartPointData(mmm);
+            return chartPointData;
+        });
+        const yandexChartDatum = timemachineNowHourDatum.map(hourData => {
+            const mmm = new Mmm(hourData.byProvider.yandex.reading.temperature, hourData.byProvider.yandex.reading.temperature, hourData.byProvider.yandex.reading.temperature);
+            const chartPointData = new ChartPointData(mmm);
+            return chartPointData;
+        });
+        const gidrometChartDatum = timemachineNowHourDatum.map(hourData => {
+            const mmm = new Mmm(hourData.byProvider.gidromet.reading.temperature, hourData.byProvider.gidromet.reading.temperature, hourData.byProvider.gidromet.reading.temperature);
+            const chartPointData = new ChartPointData(mmm);
+            return chartPointData;
+        });
+        const referenceChartDatum = timemachineNowHourDatum.map(hourData => {
+            const mmm = new Mmm(hourData.reference.reading.temperature, hourData.reference.reading.temperature, hourData.reference.reading.temperature);
+            const chartPointData = new ChartPointData(mmm);
+            return chartPointData;
+        });
+        const historyChartDatum = hourDatum.map(hourData => {
+            const mmm = new Mmm(hourData.reference.reading.temperature, hourData.reference.reading.temperature, hourData.reference.reading.temperature);
+            const chartPointData = new ChartPointData(mmm);
+            return chartPointData;
+        });
 
-    const openWeatherChartDatum = hourDatum.map(hourData => {
-        const mmm = new Mmm(hourData.byProvider.openWeather.reading.temperature, hourData.byProvider.openWeather.reading.temperature, hourData.byProvider.openWeather.reading.temperature);
-        const chartPointData = new ChartPointData(mmm);
-        return chartPointData;
-    });
-    const forecaChartDatum = hourDatum.map(hourData => {
-        const mmm = new Mmm(hourData.byProvider.foreca.reading.temperature, hourData.byProvider.foreca.reading.temperature, hourData.byProvider.foreca.reading.temperature);
-        const chartPointData = new ChartPointData(mmm);
-        return chartPointData;
-    });
-    const yandexChartDatum = hourDatum.map(hourData => {
-        const mmm = new Mmm(hourData.byProvider.yandex.reading.temperature, hourData.byProvider.yandex.reading.temperature, hourData.byProvider.yandex.reading.temperature);
-        const chartPointData = new ChartPointData(mmm);
-        return chartPointData;
-    });
-    const gidrometChartDatum = hourDatum.map(hourData => {
-        const mmm = new Mmm(hourData.byProvider.gidromet.reading.temperature, hourData.byProvider.gidromet.reading.temperature, hourData.byProvider.gidromet.reading.temperature);
-        const chartPointData = new ChartPointData(mmm);
-        return chartPointData;
-    });
-    const referenceChartDatum = hourDatum.map(hourData => {
-        const mmm = new Mmm(hourData.reference.reading.temperature, hourData.reference.reading.temperature, hourData.reference.reading.temperature);
-        const chartPointData = new ChartPointData(mmm);
-        return chartPointData;
-    });
-
-
-    /////////////////////
-    /////////////////////
-    /////////////////////
-    const openWeatherChartForecastDatum = [];
-    const forecaChartForecastDatum = [];
-    const yandexChartForecastDatum = [];
-    const gidrometChartForecastDatum = [];
-    const lastHourData = hourDatum[hourDatum.length - 1];
-    { // openWeather
-        const forecastData = lastHourData.byProvider.openWeather.reading;
-        const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
-        openWeatherChartForecastDatum[0] = new ChartPointData(mmm);
-    }
-    { // foreca
-        const forecastData = lastHourData.byProvider.foreca.reading;
-        const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
-        forecaChartForecastDatum[0] = new ChartPointData(mmm);
-    }
-    { // yandex
-        const forecastData = lastHourData.byProvider.yandex.reading;
-        const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
-        yandexChartForecastDatum[0] = new ChartPointData(mmm);
-    }
-    { // gidromet
-        const forecastData = lastHourData.byProvider.gidromet.reading;
-        const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
-        gidrometChartForecastDatum[0] = new ChartPointData(mmm);
-    }
-    const forecastLength = 96;
-
-    for (let i = 0; i < forecastLength; i++) {
+        /////////////////////
+        /////////////////////
+        /////////////////////
+        const openWeatherChartForecastDatum = [];
+        const forecaChartForecastDatum = [];
+        const yandexChartForecastDatum = [];
+        const gidrometChartForecastDatum = [];
+        const lastHourData = timemachineNowHourDatum[timemachineNowHourDatum.length - 1];
         { // openWeather
-            const forecastData = lastHourData.byProvider.openWeather.forecasts[i];
-            const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
-            openWeatherChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            const forecastData = lastHourData.byProvider.openWeather.reading;
+            const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
+            openWeatherChartForecastDatum[0] = new ChartPointData(mmm);
         }
         { // foreca
-            const forecastData = lastHourData.byProvider.foreca.forecasts[i];
-            const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
-            forecaChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            const forecastData = lastHourData.byProvider.foreca.reading;
+            const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
+            forecaChartForecastDatum[0] = new ChartPointData(mmm);
         }
         { // yandex
-            const forecastData = lastHourData.byProvider.yandex.forecasts[i];
-            const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
-            yandexChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            const forecastData = lastHourData.byProvider.yandex.reading;
+            const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
+            yandexChartForecastDatum[0] = new ChartPointData(mmm);
         }
         { // gidromet
-            const forecastData = lastHourData.byProvider.gidromet.forecasts[i];
-            const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
-            gidrometChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            const forecastData = lastHourData.byProvider.gidromet.reading;
+            const mmm = new Mmm(forecastData.temperature, forecastData.temperature, forecastData.temperature);
+            gidrometChartForecastDatum[0] = new ChartPointData(mmm);
         }
+
+        const forecastLength = 96;
+
+        for (let i = 0; i < forecastLength; i++) {
+            { // openWeather
+                const forecastData = lastHourData.byProvider.openWeather.forecasts[i];
+                const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
+                openWeatherChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            }
+            { // foreca
+                const forecastData = lastHourData.byProvider.foreca.forecasts[i];
+                const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
+                forecaChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            }
+            { // yandex
+                const forecastData = lastHourData.byProvider.yandex.forecasts[i];
+                const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
+                yandexChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            }
+            { // gidromet
+                const forecastData = lastHourData.byProvider.gidromet.forecasts[i];
+                const mmm = new Mmm(forecastData.temperature.min, forecastData.temperature.mean, forecastData.temperature.max);
+                gidrometChartForecastDatum[i + 1] = new ChartPointData(mmm);
+            }
+        }
+
+        /////////////////////
+        /////////////////////
+        /////////////////////
+
+        return new ChartDatum(new ChartByProviderDatum(
+            new ChartPointSerialDatum(openWeatherChartDatum, 0),
+            new ChartPointSerialDatum(forecaChartDatum, 0),
+            new ChartPointSerialDatum(yandexChartDatum, 0),
+            new ChartPointSerialDatum(gidrometChartDatum, 0),
+        ), new ChartByProviderDatum(
+            new ChartPointSerialDatum(openWeatherChartForecastDatum, timemachineNowHourDatum.length - 1),
+            new ChartPointSerialDatum(forecaChartForecastDatum, timemachineNowHourDatum.length - 1),
+            new ChartPointSerialDatum(yandexChartForecastDatum, timemachineNowHourDatum.length - 1),
+            new ChartPointSerialDatum(gidrometChartForecastDatum, timemachineNowHourDatum.length - 1),
+        ), new ChartPointSerialDatum(referenceChartDatum, 0), new ChartPointSerialDatum(historyChartDatum, 0), timemachineNowHourDatum.length + forecastLength, firstHourstep, 'C°');
+    } else {
+        return new ChartDatum(new ChartByProviderDatum(
+            new ChartPointSerialDatum([], 0),
+            new ChartPointSerialDatum([], 0),
+            new ChartPointSerialDatum([], 0),
+            new ChartPointSerialDatum([], 0),
+        ), new ChartByProviderDatum(
+            new ChartPointSerialDatum([], 0),
+            new ChartPointSerialDatum([], 0),
+            new ChartPointSerialDatum([], 0),
+            new ChartPointSerialDatum([], 0),
+        ), new ChartPointSerialDatum([], 0), new ChartPointSerialDatum([], 0), 0, firstHourstep, 'C°');
     }
-
-    /////////////////////
-    /////////////////////
-    /////////////////////
-
-    return new ChartDatum(new ChartByProviderDatum(
-        new ChartPointSerialDatum(openWeatherChartDatum, 0),
-        new ChartPointSerialDatum(forecaChartDatum, 0),
-        new ChartPointSerialDatum(yandexChartDatum, 0),
-        new ChartPointSerialDatum(gidrometChartDatum, 0),
-    ), new ChartByProviderDatum(
-        new ChartPointSerialDatum(openWeatherChartForecastDatum, hourDatum.length - 1),
-        new ChartPointSerialDatum(forecaChartForecastDatum, hourDatum.length - 1),
-        new ChartPointSerialDatum(yandexChartForecastDatum, hourDatum.length - 1),
-        new ChartPointSerialDatum(gidrometChartForecastDatum, hourDatum.length - 1),
-    ), new ChartPointSerialDatum(referenceChartDatum, 0), hourDatum.length + forecastLength, firstHourstep, 'C°');
-
 }
 
 export function hourDatumToAnalysisChartDatum(hourDatum: HourData[], timestepBrickIdx: number): ChartDatum {
@@ -275,7 +294,7 @@ export function hourDatumToAnalysisChartDatum(hourDatum: HourData[], timestepBri
             const chartPointData = new ChartPointData(mmm);
             return chartPointData;
         });
-
+        const historyChartDatum = referenceChartDatum;
 
         return new ChartDatum(new ChartByProviderDatum(
             new ChartPointSerialDatum([], 0),
@@ -287,7 +306,7 @@ export function hourDatumToAnalysisChartDatum(hourDatum: HourData[], timestepBri
             new ChartPointSerialDatum(forecaChartDatum, 0),
             new ChartPointSerialDatum(yandexChartDatum, 0),
             new ChartPointSerialDatum(gidrometChartDatum, 0),
-        ), new ChartPointSerialDatum(referenceChartDatum, 0), hourDatum.length, firstHourstep, 'C°');
+        ), new ChartPointSerialDatum(referenceChartDatum, 0), new ChartPointSerialDatum(historyChartDatum, 0), hourDatum.length, firstHourstep, 'C°');
     } else {
         const forecastIdx = timestepBrickIdx * 6 - 1;
         const openWeatherChartDatum = hourDatum.map(hourData => {
@@ -316,6 +335,7 @@ export function hourDatumToAnalysisChartDatum(hourDatum: HourData[], timestepBri
             return chartPointData;
         });
         referenceChartDatum.splice(0, forecastIdx + 1);
+        const historyChartDatum = referenceChartDatum;
         return new ChartDatum(new ChartByProviderDatum(
             new ChartPointSerialDatum([], 0), // TODO!!!!!!!!!!!!!!!!!!
             new ChartPointSerialDatum([], 0),
@@ -326,6 +346,6 @@ export function hourDatumToAnalysisChartDatum(hourDatum: HourData[], timestepBri
             new ChartPointSerialDatum(forecaChartDatum, 0),
             new ChartPointSerialDatum(yandexChartDatum, 0),
             new ChartPointSerialDatum(gidrometChartDatum, 0),
-        ), new ChartPointSerialDatum(referenceChartDatum, 0), hourDatum.length, firstHourstep + 1 + forecastIdx, 'C°');
+        ), new ChartPointSerialDatum(referenceChartDatum, 0), new ChartPointSerialDatum(historyChartDatum, 0), hourDatum.length, firstHourstep + 1 + forecastIdx, 'C°');
     }
 }

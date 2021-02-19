@@ -35,6 +35,7 @@ export class ChartDatum {
         public readingByProvider: ChartByProviderDatum,
         public forecastByProvider: ChartByProviderDatum,
         public reference: ChartPointSerialDatum,
+        public history: ChartPointSerialDatum,
         public hourstepDim: number,
         public firstHourstep: number,
         public unit: string,
@@ -44,21 +45,21 @@ export class ChartDatum {
 
 }
 export class ChartDatumWidget {
-    constructor(protected $container: HTMLElement, protected cssPrefix:string = 'chart-datum') {
+    constructor(private $container: HTMLElement, private cssPrefix:string = 'chart-datum') {
         this.buildDom();
     }
-    protected $root?: HTMLElement;
-    protected $canvas?: HTMLCanvasElement;
-    protected ctx?: CanvasRenderingContext2D;
-    protected virtualSize: {width: number, height: number} = {width: 0, height: 0};
-    protected xRullerVirualSize: number = 60;
-    protected yRullerVirualSize: number = 80;
-    protected outerVirualMargin: number = 32;
-    protected innerVirualMargin: number = 8;
-    protected chartDatum?: ChartDatum;
-    protected hotPointChartPosition: positionT = {x: 1, y: 0.5};
-    protected hotHourstep: number | undefined;
-    protected datumBounds: {x: {min: number, max: number, width: number}, y: {min: number, max: number, height: number}} = {
+    private $root?: HTMLElement;
+    private $canvas?: HTMLCanvasElement;
+    private ctx?: CanvasRenderingContext2D;
+    private virtualSize: {width: number, height: number} = {width: 0, height: 0};
+    private xRullerVirualSize: number = 60;
+    private yRullerVirualSize: number = 80;
+    private outerVirualMargin: number = 32;
+    private innerVirualMargin: number = 8;
+    private chartDatum?: ChartDatum;
+    private hotPointChartPosition: positionT = {x: 1, y: 0.5};
+    private hotHourstep: number | undefined;
+    private datumBounds: {x: {min: number, max: number, width: number}, y: {min: number, max: number, height: number}} = {
         x: {
             min: 0,
             max: 0,
@@ -70,7 +71,7 @@ export class ChartDatumWidget {
             height: 0,
         }
     };
-    protected retinaCoords: {
+    private retinaCoords: {
         retinaSize: sizeT,
         xRullerRetinaSize: sizeT,
         yRullerRetinaSize: sizeT,
@@ -93,7 +94,7 @@ export class ChartDatumWidget {
         this.recalcDatumBounds();
         this.redraw();
     }
-    protected recalcDatumBounds() {
+    private recalcDatumBounds() {
         this.datumBounds = {
             x: {
                 min: Infinity,
@@ -125,9 +126,6 @@ export class ChartDatumWidget {
                 })
             })
 
-
-
-
             this.chartDatum!.reference.values.forEach(chartPoint => {
                 keys.forEach(key => {
                     const value = chartPoint.value[key];
@@ -137,6 +135,11 @@ export class ChartDatumWidget {
                     }
                 });
             });
+
+            this.datumBounds.y.min = Math.floor(this.datumBounds.y.min / 10) * 10;
+            this.datumBounds.y.max = Math.ceil(this.datumBounds.y.max / 10) * 10;
+
+
             this.datumBounds.x.min = this.chartDatum.firstHourstep;
             this.datumBounds.x.max = this.chartDatum.firstHourstep + this.chartDatum.hourstepDim - 1;
             this.datumBounds.x.width = this.datumBounds.x.max - this.datumBounds.x.min;
@@ -145,7 +148,7 @@ export class ChartDatumWidget {
         }
 
     }
-    protected recalcRetinaCoords() {
+    private recalcRetinaCoords() {
         const retinaSize = {
             width: this.virtualSize.width * window.devicePixelRatio,
             height: this.virtualSize.height * window.devicePixelRatio,
@@ -188,7 +191,7 @@ export class ChartDatumWidget {
             yRullerTopLeftRetinaPosition
         }
     }
-    protected remap = {
+    private remap = {
         chartToRetina: (chartPosition: positionT) => {
             const retinaPosition = {
                 x: this.retinaCoords.chartTopLeftRetinaPosition.x + chartPosition.x * this.retinaCoords.chartRetinaSize.width,
@@ -226,7 +229,7 @@ export class ChartDatumWidget {
             return localPosition;
         }
     }
-    protected buildDom() {
+    private buildDom() {
         this.$root = document.createElement('div');
         this.$root.classList.add(this.cssPrefix);
         this.$canvas = document.createElement('canvas');
@@ -249,7 +252,7 @@ export class ChartDatumWidget {
         }, 0);
 
     }
-    protected onDomResize() {
+    private onDomResize() {
         this.virtualSize = {
             width: this.$root!.clientWidth,
             height: this.$root!.clientHeight,
@@ -269,7 +272,7 @@ export class ChartDatumWidget {
         this.$canvas!.style.height = intishVirtualSize.height + 'px';
         this.redraw();
     }
-    protected setHotpoint(retinaPosition: positionT) {
+    private setHotpoint(retinaPosition: positionT) {
         this.hotPointChartPosition = clampLocalPosition(this.remap.retinaToChart(retinaPosition));
         this.redraw();
     }
@@ -277,7 +280,7 @@ export class ChartDatumWidget {
         this.hotHourstep = hotHourstep;
         this.redraw();
     }
-    protected drawBoundingBox(mappingToRetina: remapFnT): void {
+    private drawBoundingBox(mappingToRetina: remapFnT): void {
         { // box
             this.ctx!.save();
             this.ctx!.strokeStyle = '#000';
@@ -313,7 +316,7 @@ export class ChartDatumWidget {
         //     this.ctx!.restore();
         // }
     }
-    protected redraw() {
+    private redraw() {
         this.ctx!.clearRect(0, 0, this.retinaCoords.retinaSize.width, this.retinaCoords.retinaSize.height);
 
 
@@ -350,9 +353,15 @@ export class ChartDatumWidget {
             });
 
             { // reference
-                const baseColor = {r: 0, g: 0, b: 0, a: 0.67};
+                const baseColor = {r: 0, g: 0, b: 0, a: 0.5};
                 this.drawProviderMean('reference', this.chartDatum.reference, this.chartDatum!.firstHourstep, baseColor, 16);
                 this.drawProviderMinMax('reference', this.chartDatum.reference, this.chartDatum!.firstHourstep, baseColor);
+            }
+
+            { // history
+                const baseColor = {r: 0, g: 0, b: 0, a: 1};
+                this.drawProviderMean('history', this.chartDatum.history, this.chartDatum!.firstHourstep, baseColor, 4);
+                this.drawProviderMinMax('history', this.chartDatum.history, this.chartDatum!.firstHourstep, baseColor);
             }
 
             this.drawXRuller();
@@ -368,7 +377,7 @@ export class ChartDatumWidget {
             this.ctx!.restore();
         }
     }
-    protected drawProviderMean(providerKey: string, serialDatum: ChartPointSerialDatum, firstHourstep: number, color: rgbaT, lineWidth: number = 4, lineDash: [number, number] | undefined = undefined) {
+    private drawProviderMean(providerKey: string, serialDatum: ChartPointSerialDatum, firstHourstep: number, color: rgbaT, lineWidth: number = 4, lineDash: [number, number] | undefined = undefined) {
         const chartPoints = serialDatum.values;
         const firstChartPoint = chartPoints[0];
         if (firstChartPoint) {
@@ -391,7 +400,7 @@ export class ChartDatumWidget {
 
         }
     }
-    protected drawProviderMinMax(providerKey: string, serialDatum: ChartPointSerialDatum, firstHourstep: number, color: rgbaT) {
+    private drawProviderMinMax(providerKey: string, serialDatum: ChartPointSerialDatum, firstHourstep: number, color: rgbaT) {
         const chartPoints = serialDatum.values;
         const firstChartPoint = chartPoints[0];
         if (firstChartPoint) {
@@ -420,7 +429,7 @@ export class ChartDatumWidget {
 
         }
     }
-    protected drawXRuller() {
+    private drawXRuller() {
         const stepMinRetinaWidth = 160 * window.devicePixelRatio;
         const stepRetinaWidth = Math.max(stepMinRetinaWidth, this.retinaCoords.xRullerRetinaSize.width / this.datumBounds.x.width);
         const stepDatumWidth = stepRetinaWidth / this.retinaCoords.xRullerRetinaSize.width * this.datumBounds.x.width;
@@ -566,7 +575,7 @@ export class ChartDatumWidget {
         this.ctx!.restore();
     }
 
-    protected drawYRuller() {
+    private drawYRuller() {
         const stepMinRetinaHeight = 16 * window.devicePixelRatio;
         const stepRetinaHeight = Math.max(stepMinRetinaHeight, this.retinaCoords.yRullerRetinaSize.height / this.datumBounds.y.height);
         //const stepDatumHeight = stepRetinaHeight / this.retinaCoords.yRullerRetinaSize.height * this.datumBounds.y.height;
@@ -621,7 +630,7 @@ export class ChartDatumWidget {
         this.ctx!.restore();
     }
 
-    protected drawHotPoint() {
+    private drawHotPoint() {
         const chartHotPointRetinaPositionX1 = this.remap.chartToRetina({x: this.hotPointChartPosition.x, y: 0});
         const chartHotPointRetinaPositionX2 = this.remap.chartToRetina({x: this.hotPointChartPosition.x, y: 1});
         const chartHotPointRetinaPositionY1 = this.remap.chartToRetina({x: 0, y: this.hotPointChartPosition.y});

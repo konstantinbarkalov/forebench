@@ -8,7 +8,8 @@
     "bundle": "npx parcel build ./build/app.js --no-optimize --dist-dir ./dist",
     "serve": "node server.js",
     "start": "npm run build && npm run bundle && npm run serve",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "start npm run serve && tsc --watch"
   },
   "browserslist": [
     "last 3 and_chr versions",

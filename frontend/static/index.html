@@ -232,6 +232,72 @@
                 color: #fff;
                 border: none;
             }
+            .timemachine {
+                display: flex;
+                flex-direction: column;
+                padding: 24px 32px;
+                background: linear-gradient(90deg, #4a2c0e, transparent, #080544);
+                background-color: #000;
+                text-align: center;
+                color: #eee;
+                transition: background-color 1s;
+            }
+            .timemachine.timemachine--play.timemachine--speed-1 {
+                background-color: #5c2b72;
+            }
+            .timemachine.timemachine--play.timemachine--speed-2 {
+                background-color: #9b0d44;
+            }
+
+            .timemachine-line {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+            }
+            .timemachine-block {
+                display: flex;
+                flex-direction: row;
+                padding: 8px;
+            }
+            .timemachine-block.timemachine-block--grow {
+                flex-grow: 1;
+            }
+
+            .timemachine-button {
+                flex-grow: 1;
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                -ms-appearance: none;
+                font-size: inherit;
+                padding: 16px 16px;
+                background-color: #745c91;
+                color: #fff;
+                border: none;
+                font-family: -webkit-pictograph;
+            }
+            .timemachine-instant-button {
+                background-color: #a45aff2a;
+            }
+            .timemachine-play-button {
+                background-color: #b17bf35d;
+            }
+            .timemachine-input {
+                flex-grow: 1;
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                -ms-appearance: none;
+                font-size: inherit;
+                padding: 6px 8px;
+                border: none;
+                background-color: #eee;
+                color: #222;
+            }
+            .timemachine-pretty-hourstep {
+                font-size: 12px;
+                color: rgba(225, 167, 255, 0.67);
+            }
             #dev-log-container {
                 display: none;
             }
@@ -329,6 +395,7 @@
                             </select>
                         </div>
                     </div>
+                    <div id="timemachine-container"></div>
                     <div id="chart-datum-container">
                     </div>
                     <div class="scroller scroller--momentum" id="timestep-bricks-container">
@@ -394,7 +461,7 @@
             JsErrorShower.init();
         </script>
         <script src="https://unpkg.com/@ungap/event-target"></script>
-        <!-- <script src="/build/app.js" type="module"></script> -->
-        <script src="/dist/app.js"></script>
+        <script src="/build/app.js" type="module"></script>
+        <!-- <script src="/dist/app.js"></script> -->
     </body>
 </html>
