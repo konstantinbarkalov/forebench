@@ -10,6 +10,14 @@ import { HourDatumBundle } from './shared/frontend/datum.js';
 import { Api } from "./api/api.js";
 import { hourDataToActiveTimestepBrick, hourDataToProviderBricks, hourDataToTimestepBricks, hourDatumToAnalysisChartDatum, hourDatumToOverviewChartDatum } from './todo.js';
 import { timemachineBoundsT, TimemachineWidget } from './timemachineWidget.js';
+import { PreloaderWidget } from './preloaderWidget.js';
+
+const $preloaderContainer = document.getElementById('preloader-container');
+const $preloader = document.getElementById('preloader');
+const $preloaderTopText = document.getElementById('preloader-top-text');
+const $preloaderBottomText = document.getElementById('preloader-bottom-text');
+const $preloaderBar = document.getElementById('preloader-bar');
+const $appRoot = document.getElementById('app-root');
 
 const $timestepBricksContainer = document.getElementById('timestep-bricks-container');
 const $activeTimestepBrickContainer = document.getElementById('active-timestep-brick-container');
@@ -21,6 +29,7 @@ const $timemachineContainer = document.getElementById('timemachine-container');
 
 class App {
     private api: Api = new Api();
+    private preloaderWidget: PreloaderWidget;
     private timestepBricksWidget: TimestepBricksWidget;
     private activeTimestepBrickWidget: ActiveTimestepBrickWidget;
     private providerBricksWidget: ProviderBricksWidget;
@@ -37,7 +46,14 @@ class App {
         $chartDatumContainer: HTMLElement,
         $chartDatumContainer2: HTMLElement,
         $timemachineContainer: HTMLElement,
+        $preloaderContainer: HTMLElement,
+        $preloader: HTMLElement,
+        $preloaderTopText: HTMLElement,
+        $preloaderBottomText: HTMLElement,
+        $preloaderBar: HTMLElement,
+        $appRoot: HTMLElement
     ) {
+        this.preloaderWidget = new PreloaderWidget($preloaderContainer, $preloader, $preloaderTopText, $preloaderBottomText, $preloaderBar, $appRoot)
         this.timestepBricksWidget = new TimestepBricksWidget($timestepBricksContainer);
         this.activeTimestepBrickWidget = new ActiveTimestepBrickWidget($activeTimestepBrickContainer);
         this.providerBricksWidget = new ProviderBricksWidget($providerBricksContainer);
@@ -63,8 +79,12 @@ class App {
     }
     public async start() {
         //const hourDatumBundle = await this.api.getHourDatumBundle();
-        const hourDatumBundle = await this.api.getHourDatumBundleWithProgress($devLogContainer!);
+        this.preloaderWidget.setCaption('загрузка данных...');
+        const hourDatumBundle = await this.api.getHourDatumBundleWithProgress((progressRatio) => {
+            this.preloaderWidget.setPreloadRatio(progressRatio);
+        });
         this.setHourDatumBundle(hourDatumBundle);
+        this.preloaderWidget.setIsPreloaded(true);
 
     }
     private setHourDatumBundle(hourDatumBundle: HourDatumBundle) {
@@ -127,7 +147,18 @@ class App {
     }
 }
 
-const app = new App($timestepBricksContainer!, $activeTimestepBrickContainer!, $providerBricksContainer!, $chartDatumContainer!, $chartDatumContainer2!, $timemachineContainer!);
+const app = new App($timestepBricksContainer!,
+                    $activeTimestepBrickContainer!,
+                    $providerBricksContainer!,
+                    $chartDatumContainer!,
+                    $chartDatumContainer2!,
+                    $timemachineContainer!,
+                    $preloaderContainer!,
+                    $preloader!,
+                    $preloaderTopText!,
+                    $preloaderBottomText!,
+                    $preloaderBar!,
+                    $appRoot!);
 
 console.log('hi, frontend!', app);
 async function start() {

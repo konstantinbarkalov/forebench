@@ -301,14 +301,67 @@
             #dev-log-container {
                 display: none;
             }
+            #js-error-root {
+                position: relative;
+                z-index: 100;
+            }
+        </style>
+        <style>
+            #preloader-container {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                z-index: 2;
+                background-color: #eee;
+                background-image: radial-gradient(transparent, #fff);
+                background-color: #b9e4fb;
+            }
+            .preloader {
+                padding: 32px;
+                text-align: center;
+            }
+            .preloader-text {
+
+            }
+            .preloader-progress-bar {
+                width: 100%;
+                height: 52px;
+                position: relative;
+                background-color: #fff;
+                box-shadow: 0 12px 12px -12px rgb(0 0 0 / 25%), 0 0 64px 32px rgb(203 255 196 / 25%);
+            }
+            .preloader-progress-bar .preloader-progress-bar__bar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 0%;
+                height: 100%;
+                background-color: #76a170;
+            }
+            #app-root #content-root {
+                display: none;
+            }
+            #app-root#app-root--is-preloaded #content-root {
+                display: block;
+            }
+            #app-root #content-root {
+                display: flex;
+            }
+            #app-root.app-root--is-preloaded #preloader-root {
+                display: none;
+            }
         </style>
     </head>
     <body>
         <div id="app-root">
             <div id="display-root">
                 <div id="content-root">
-                    <div id="js-error-container">
-                    </div>
                     <div id="dev-log-container">
                     </div>
                     <div class="hero">
@@ -407,6 +460,21 @@
                     <div id="chart-datum-container2">
                     </div>
                 </div>
+                <div id="preloader-root">
+                    <div id="preloader-container">
+                        <div id="preloader" class="preloader">
+                            <div id="preloader-top-text" class="preloader-text preloader-text--top">Загрузка приложения...</div>
+                            <div class="preloader-progress-bar">
+                                <div id="preloader-bar" class="preloader-progress-bar__bar" style="width: 10%"></div>
+                            </div>
+                            <div id="preloader-bottom-text" class="preloader-text preloader-text--bottom">10%</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="js-error-root">
+                    <div id="js-error-container">
+                    </div>
+                </div>
             </div>
         </div>
         <script>
@@ -461,7 +529,7 @@
             JsErrorShower.init();
         </script>
         <script src="https://unpkg.com/@ungap/event-target"></script>
-        <!-- <script src="/build/app.js" type="module"></script> -->
-        <script src="/dist/app.js"></script>
+        <script src="/build/app.js" type="module"></script>
+        <!-- <script src="/dist/app.js"></script> -->
     </body>
 </html>

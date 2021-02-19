@@ -11,7 +11,7 @@ export class Api extends AbstractApi {
         const hourDatumBundle = HourDatumBundle.fromPlainTree(hourDatumBundlePlainTree);
         return hourDatumBundle;
     }
-    public async getHourDatumBundleWithProgress(devLogContainer: HTMLElement): Promise<HourDatumBundle> {
+    public async getHourDatumBundleWithProgress(progressCallback: (ratio: number) => void): Promise<HourDatumBundle> {
         // Шаг 1: начинаем загрузку fetch, получаем поток для чтения
         const fetchResult = await fetch('/hourDatumBundle');
         const reader = fetchResult.body!.getReader();
@@ -22,12 +22,14 @@ export class Api extends AbstractApi {
         while (true) {
             const {done, value} = await reader.read();
             if (done) {
+                progressCallback(1);
                 break;
             }
             if (value) {
                 chunks.push(value);
                 receivedLength += value.length;
-                devLogContainer.innerText = `Получено ${receivedLength} из ${contentLength}`;
+                const ratio = receivedLength / contentLength;
+                progressCallback(ratio);
             }
         }
 
